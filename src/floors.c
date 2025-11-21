@@ -38,7 +38,6 @@ extern char      outFlag;
 extern char      onConsole;
 extern char      *baseRoom;
 
-int FlagCheck(int i);
 /*
  * FloorRunner()
  *
@@ -114,6 +113,84 @@ int FirstRoom(int FloorNo)
             return rover;
     }
     return ERROR;
+}
+
+/*
+ * FindFloor()
+ *
+ * This function returns index for the given floor name.
+ */
+static int FindFloor(label name, char doPartial)
+{
+    int rover;
+
+    for (rover = 0; rover < TopFloor; rover++) {
+        if (strCmpU(name, FloorTab[rover].FlName) == SAMESTRING &&
+                       FloorTab[rover].FlInuse) {
+            return rover;
+        }
+    }
+
+    if (doPartial)
+        for (rover = 0; rover < TopFloor; rover++) {
+            if (FloorTab[rover].FlInuse && 
+                        matchString(FloorTab[rover].FlName, name,
+                                     lbyte(FloorTab[rover].FlName)) != NULL)
+                return rover;
+        }
+    return ERROR;
+}
+
+/*
+ * FGotoSkip()
+ *
+ * This function will let us Skip an entire floor.
+ */
+static char FGotoSkip(int mode)
+{
+    label floorName;
+    int   floorNo, newRoom, rover;
+    char  dispbuf[40];
+
+    outFlag = IMPERVIOUS;
+    if (mode & MOVE_SKIP) {
+        sprintf(dispbuf, "[%s] goto ",
+                            FloorTab[roomTab[thisRoom].rtFlIndex].FlName);
+	mPrintf("%s", dispbuf);
+    }
+
+    if (getNormStr("", floorName, NAMESIZE, BS_VALID) == BACKED_OUT) {
+	if (mode & MOVE_SKIP)
+	    for (rover = 0; rover < strLen(dispbuf); rover++)
+		mPrintf("\b \b");
+	return BACKED_OUT;
+    }
+
+    if (strLen(floorName) != 0) {
+        if ((floorNo = FindFloor(floorName, TRUE)) == ERROR) {
+            mPrintf(" ?no %s floor\n", floorName);
+            return GOOD_SELECT;
+        }
+        if ((newRoom = FloorRunner(FirstRoom(floorNo), FindAny)) == ERROR) {
+            mPrintf(" No known rooms on floor %s\n", FloorTab[floorNo].FlName);
+            return GOOD_SELECT;
+        }
+    }
+    else {
+        floorNo = thisFloor;
+        for (rover = 0; rover < TopFloor; rover++)
+            if (rover != floorNo && FloorTab[rover].FlInuse) {
+                newRoom = FirstRoom(rover);
+                if ((newRoom = FloorRunner(newRoom, NSRoomHasNew)) != ERROR)
+                    break;
+            }
+
+        if (rover == TopFloor)
+            newRoom = 0;
+    }
+    if (mode & MOVE_SKIP) FloorRunner(thisRoom, FSroom);
+    gotoRoom(roomTab[newRoom].rtname, mode | MOVE_TALK);
+    return GOOD_SELECT;
 }
 
 /*
@@ -267,84 +344,6 @@ char FConfigure()
     FloorMode = !FloorMode;
     mPrintf("%s mode\n ", (FloorMode) ? "FLOOR" : "Normal");
     return GOOD_SELECT;
-}
-
-/*
- * FGotoSkip()
- *
- * This function will let us Skip an entire floor.
- */
-static char FGotoSkip(int mode)
-{
-    label floorName;
-    int   floorNo, newRoom, rover;
-    char  dispbuf[40];
-
-    outFlag = IMPERVIOUS;
-    if (mode & MOVE_SKIP) {
-        sprintf(dispbuf, "[%s] goto ",
-                            FloorTab[roomTab[thisRoom].rtFlIndex].FlName);
-	mPrintf("%s", dispbuf);
-    }
-
-    if (getNormStr("", floorName, NAMESIZE, BS_VALID) == BACKED_OUT) {
-	if (mode & MOVE_SKIP)
-	    for (rover = 0; rover < strLen(dispbuf); rover++)
-		mPrintf("\b \b");
-	return BACKED_OUT;
-    }
-
-    if (strLen(floorName) != 0) {
-        if ((floorNo = FindFloor(floorName, TRUE)) == ERROR) {
-            mPrintf(" ?no %s floor\n", floorName);
-            return GOOD_SELECT;
-        }
-        if ((newRoom = FloorRunner(FirstRoom(floorNo), FindAny)) == ERROR) {
-            mPrintf(" No known rooms on floor %s\n", FloorTab[floorNo].FlName);
-            return GOOD_SELECT;
-        }
-    }
-    else {
-        floorNo = thisFloor;
-        for (rover = 0; rover < TopFloor; rover++)
-            if (rover != floorNo && FloorTab[rover].FlInuse) {
-                newRoom = FirstRoom(rover);
-                if ((newRoom = FloorRunner(newRoom, NSRoomHasNew)) != ERROR)
-                    break;
-            }
-
-        if (rover == TopFloor)
-            newRoom = 0;
-    }
-    if (mode & MOVE_SKIP) FloorRunner(thisRoom, FSroom);
-    gotoRoom(roomTab[newRoom].rtname, mode | MOVE_TALK);
-    return GOOD_SELECT;
-}
-
-/*
- * FindFloor()
- *
- * This function returns index for the given floor name.
- */
-static int FindFloor(label name, char doPartial)
-{
-    int rover;
-
-    for (rover = 0; rover < TopFloor; rover++) {
-        if (strCmpU(name, FloorTab[rover].FlName) == SAMESTRING &&
-                       FloorTab[rover].FlInuse) {
-            return rover;
-        }
-    }
-
-    if (doPartial)
-        for (rover = 0; rover < TopFloor; rover++) {
-            if (FloorTab[rover].FlInuse && 
-                        matchString(FloorTab[rover].FlName, name,
-                                     lbyte(FloorTab[rover].FlName)) != NULL)
-                return rover;
-        }
-    return ERROR;
 }
 
 /*
@@ -769,6 +768,17 @@ int RoomHasNew(int i)
             logBuf.lastvisit[i] && roomTab[i].rtlastMessage >= cfg.oldest);
 }
 
+static int FlagCheck(int i)
+{
+    if (( SelDirs   &&   roomTab[i].rtflags.ISDIR   ) ||
+        ( SelShared &&   roomTab[i].rtflags.SHARED  ) ||
+        ( SelPriv   &&   !roomTab[i].rtflags.PUBLIC ) ||
+        ( SelAnon   &&   roomTab[i].rtflags.ANON )    ||
+        ( SelRO     &&   roomTab[i].rtflags.READ_ONLY ))
+	return TRUE;
+    return FALSE;
+}
+
 /*
  * CheckFloor()
  *
@@ -861,15 +871,4 @@ int FSroom(int i)
 int FindAny(int i)
 {
     return TRUE;        /* My, that was easy... */
-}
-
-static int FlagCheck(int i)
-{
-    if (( SelDirs   &&   roomTab[i].rtflags.ISDIR   ) ||
-        ( SelShared &&   roomTab[i].rtflags.SHARED  ) ||
-        ( SelPriv   &&   !roomTab[i].rtflags.PUBLIC ) ||
-        ( SelAnon   &&   roomTab[i].rtflags.ANON )    ||
-        ( SelRO     &&   roomTab[i].rtflags.READ_ONLY ))
-	return TRUE;
-    return FALSE;
 }

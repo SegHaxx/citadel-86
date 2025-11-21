@@ -5,6 +5,7 @@
  */
 
 #include "ctdl.h"
+#include <errno.h>
 
 /*
  *	                        history

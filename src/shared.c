@@ -62,39 +62,11 @@ void initSharedRooms(char check)
 }
 
 /*
- * UpdateSharedRooms()
- *
- * This function updates the disk version of the shared rooms with dirty records
- * in the RAM list.
- */
-void UpdateSharedRooms()
-{
-    char flag;
-    SYS_FILE shared;
-    void UpdateSR(), FindDirty();
-
-    flag = FALSE;
-    RunListA(&SharedRooms, FindDirty, &flag);
-    if (flag) {
-	makeSysName(shared, "shared.sys", &cfg.netArea);
-	if ((sharedfd = fopen(shared, R_W_ANY)) == NULL) {
-	    if ((sharedfd = fopen(shared, WRITE_ANY)) == NULL) {
-		printf("CAN'T UPDATE SHARED ROOM FILE!\n");
-		return;
-	    }
-	}
-	RunList(&SharedRooms, UpdateSR);
-	fclose(sharedfd);
-    }
-}
-
-/*
  * FindDirty()
  *
  * This function sets the passed flag to true if the record is dirty.
  */
-static void FindDirty(SharedRoomData *room, char *flag)
-{
+static void FindDirty(SharedRoomData *room, char *flag){
     if (room->srd_flags & SRD_DIRTY)
 	*flag = TRUE;
 }
@@ -104,12 +76,36 @@ static void FindDirty(SharedRoomData *room, char *flag)
  *
  * This function updates a record in the shared.sys file on disk.
  */
-static void UpdateSR(SharedRoomData *room)
-{
+static void UpdateSR(SharedRoomData *room){
     if (room->srd_flags & SRD_DIRTY) {
 	fseek(sharedfd, sizeof(*room->room) * room->slot, 0);
 	fwrite(room->room, sizeof *room->room, 1, sharedfd);
 	room->srd_flags &= ~SRD_DIRTY;
+    }
+}
+
+/*
+ * UpdateSharedRooms()
+ *
+ * This function updates the disk version of the shared rooms with dirty records
+ * in the RAM list.
+ */
+void UpdateSharedRooms(){
+    char flag;
+    SYS_FILE shared;
+
+    flag = FALSE;
+    RunListA(&SharedRooms, (void(*)(void*,void*))FindDirty, &flag);
+    if (flag) {
+	makeSysName(shared, "shared.sys", &cfg.netArea);
+	if ((sharedfd = fopen(shared, R_W_ANY)) == NULL) {
+	    if ((sharedfd = fopen(shared, WRITE_ANY)) == NULL) {
+		printf("CAN'T UPDATE SHARED ROOM FILE!\n");
+		return;
+	    }
+	}
+	RunList(&SharedRooms, (void(*)(void*))UpdateSR);
+	fclose(sharedfd);
     }
 }
 
@@ -123,30 +119,6 @@ typedef struct {
 } SrFuncs;
 
 /*
- * EachSharedRoom()
- *
- * This does something for each shared room.
- */
-void EachSharedRoom(int system,
-    int (*func)(SharedRoomData *room, int system, int roomslot, void *d),
-    int (*virtfunc)(SharedRoomData *room, int system, int roomslot, void *d),
-    void *data)
-{
-    void ExecFunc();
-    SrFuncs Funcs; 
-
-    if (!netTab[system].ntflags.in_use) return;
-
-    Funcs.system = system;
-    Funcs.func = func;
-    Funcs.virtfunc = virtfunc;
-    Funcs.data = data;
-    Funcs.result = FALSE;
-
-    RunListA(&SharedRooms, ExecFunc, &Funcs);
-}
-
-/*
  * ExecFunc()
  *
  * This is a work function used as an iterator to go through the
@@ -155,8 +127,7 @@ void EachSharedRoom(int system,
  * the result field of funcs argument is set and checked on following
  * iterations, so all further processing can be stopped if necessary.
  */
-static void ExecFunc(SharedRoomData *room, SrFuncs *funcs)
-{
+static void ExecFunc(SharedRoomData *room, SrFuncs *funcs){
     int roomslot;
     extern int VirtSize;
     extern VirtualRoom *VRoomTab;
@@ -185,6 +156,29 @@ static void ExecFunc(SharedRoomData *room, SrFuncs *funcs)
 }
 
 /*
+ * EachSharedRoom()
+ *
+ * This does something for each shared room.
+ */
+void EachSharedRoom(int system,
+    int (*func)(SharedRoomData *room, int system, int roomslot, void *d),
+    int (*virtfunc)(SharedRoomData *room, int system, int roomslot, void *d),
+    void *data)
+{
+    SrFuncs Funcs; 
+
+    if (!netTab[system].ntflags.in_use) return;
+
+    Funcs.system = system;
+    Funcs.func = func;
+    Funcs.virtfunc = virtfunc;
+    Funcs.data = data;
+    Funcs.result = FALSE;
+
+    RunListA(&SharedRooms, (void(*)(void*,void*))ExecFunc, &Funcs);
+}
+
+/*
  * Clean()
  *
  * This function turns off the flag indicating data has been received for
@@ -196,16 +190,25 @@ void Clean(SharedRoomData *room)
 }
 
 /*
+ * FindUnused()
+ *
+ * This function checks a slot to see if it's in use.
+ */
+static void FindUnused(SharedRoomData *room, SharedRoomData **Found){
+    if (*Found == NULL && (room->room->sr_flags & SR_NOTINUSE)) {
+	*Found = room;
+    }
+}
+
+/*
  * NewSharedRoom()
  *
  * This function finds a slot for a new shared room.
  */
-SharedRoomData *NewSharedRoom()
-{
+SharedRoomData *NewSharedRoom(){
     SharedRoomData *Found = NULL;
-    void FindUnused();
 
-    RunListA(&SharedRooms, FindUnused, &Found);
+    RunListA(&SharedRooms, (void(*)(void*,void*))FindUnused, &Found);
     if (Found == NULL) {
 	Found = GetDynamic(sizeof *Found);
 	Found->room = GetDynamic(sizeof *Found->room);
@@ -217,14 +220,16 @@ SharedRoomData *NewSharedRoom()
 }
 
 /*
- * FindUnused()
+ * KillRecord()
  *
- * This function checks a slot to see if it's in use.
+ * This function kills a record if it matches the roomslot specified and it's
+ * not virtual.  Virtual room kills currently only take place in a utility.
  */
-static void FindUnused(SharedRoomData *room, SharedRoomData **Found)
-{
-    if (*Found == NULL && (room->room->sr_flags & SR_NOTINUSE)) {
-	*Found = room;
+static void KillRecord(SharedRoomData *room, int *roomslot){
+    if (!(room->room->sr_flags & SR_NOTINUSE) &&
+		!(room->room->sr_flags & SR_VIRTUAL) &&
+			*roomslot == netRoomSlot(room->room)) {
+	room->room->sr_flags |= SR_NOTINUSE;
     }
 }
 
@@ -234,27 +239,9 @@ static void FindUnused(SharedRoomData *room, SharedRoomData **Found)
  * This function kills all shared rooms records associated with the specified
  * room.
  */
-void KillSharedRoom(int room)
-{
-    void KillRecord();
-
-    RunListA(&SharedRooms, KillRecord, &room);
+void KillSharedRoom(int room){
+    RunListA(&SharedRooms, (void(*)(void*,void*))KillRecord, &room);
     UpdateSharedRooms();
-}
-
-/*
- * KillRecord()
- *
- * This function kills a record if it matches the roomslot specified and it's
- * not virtual.  Virtual room kills currently only take place in a utility.
- */
-static void KillRecord(SharedRoomData *room, int *roomslot)
-{
-    if (!(room->room->sr_flags & SR_NOTINUSE) &&
-		!(room->room->sr_flags & SR_VIRTUAL) &&
-			*roomslot == netRoomSlot(room->room)) {
-	room->room->sr_flags |= SR_NOTINUSE;
-    }
 }
 
 void *FindShared(SharedRoomData *roomd, SharedRoomData *new)
@@ -286,32 +273,7 @@ int KillShared(SharedRoomData *room, int system, int roomslot, void *d)
     return TRUE;
 }
 
-/*
- * EachSharingNode
- *
- * This function iterates through all nodes sharing the given room.
- */
-void EachSharingNode(int room, int flags,
-    int (*func)(SharedRoomData *room, int system, int roomslot, void *d),
-    void *data)
-{
-	SrFuncs Funcs; 
-	void RoomExecFunc();
-
-	if (!roomTab[room].rtflags.INUSE)
-		return;
-
-	Funcs.system = room;
-	Funcs.func   = func;
-	Funcs.data   = data;
-	Funcs.result = FALSE;
-	Funcs.flags  = flags;
-
-	RunListA(&SharedRooms, RoomExecFunc, &Funcs);
-}
-
-static void RoomExecFunc(SharedRoomData *room, SrFuncs *funcs)
-{
+static void RoomExecFunc(SharedRoomData *room, SrFuncs *funcs){
 	int roomslot;
 	extern int VirtSize;
 	extern VirtualRoom *VRoomTab;
@@ -334,4 +296,27 @@ static void RoomExecFunc(SharedRoomData *room, SrFuncs *funcs)
 			funcs->result = TRUE;
 		}
 	}
+}
+
+/*
+ * EachSharingNode
+ *
+ * This function iterates through all nodes sharing the given room.
+ */
+void EachSharingNode(int room, int flags,
+    int (*func)(SharedRoomData *room, int system, int roomslot, void *d),
+    void *data)
+{
+	SrFuncs Funcs; 
+
+	if (!roomTab[room].rtflags.INUSE)
+		return;
+
+	Funcs.system = room;
+	Funcs.func   = func;
+	Funcs.data   = data;
+	Funcs.result = FALSE;
+	Funcs.flags  = flags;
+
+	RunListA(&SharedRooms, (void(*)(void*,void*))RoomExecFunc, &Funcs);
 }

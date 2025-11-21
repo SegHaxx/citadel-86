@@ -939,15 +939,84 @@ int getNormStr(char *prompt, char *s, int size, int Flags)
     return toReturn;
 }
 
+static void NewGen(SharedRoomData *room, AN_UNSIGNED *gen){
+	printf("NG: room=%p, room->room=%p\n", room, room->room);
+	if (isSharedRoom(room->room) && netRoomSlot(room->room) == thisRoom) {
+		printf("NG: Updating %d\n", room->slot);
+		room->srd_flags |= SRD_DIRTY;
+		room->room->srgen = (*gen) + 0x8000;
+	}
+}
+
+/*
+ * UpdateSharedForNewGen()
+ *
+ * When a shared room is made private or invite only, the generation number
+ * used to key sharedness is changed. Therefore, we need to update the shared
+ * room database as appropriate.
+ */
+static void UpdateSharedForNewGen(AN_UNSIGNED gen){
+	extern SListBase SharedRooms;
+	RunListA(&SharedRooms, (void(*)(void*,void*))NewGen, &gen);
+}
+
+/*
+ * knownHosts()
+ *
+ * This function handles setting systems as sharing the room currently in
+ * roomBuf.
+ *
+ * NB: The caller to this function should call UpdateSharedRooms() after using
+ * this function.
+ */
+static int knownHosts(char *name, int ShType){
+    SharedRoomData *room;
+
+    if (CmnNetList(name, &room, ERROR, "does not share this room with you")
+								== ERROR) {
+	return TRUE;
+    }
+
+    if (room == NULL)
+	if ((room = ListAsShared(name)) == NULL)
+	    return TRUE;
+
+    SetMode(room->room->mode, ShType);
+    room->srd_flags |= SRD_DIRTY;
+
+    return TRUE;
+}
+
+/*
+ * killFromList()
+ *
+ * Kills systems from sharing a room.
+ */
+static int killFromList(char *sysName, int arg){
+    int slot;
+    SharedRoomData *room;
+
+    if ((slot=CmnNetList(sysName, &room, TRUE,
+			"does not net this room with you")) == ERROR)
+	return TRUE;
+
+    if (room != NULL) {
+	/* room->room->srgen = 0; */
+	room->room->sr_flags |= SR_NOTINUSE;
+	room->srd_flags |= SRD_DIRTY;
+    }
+
+    putNet(slot, &netBuf);
+    return TRUE;
+}
+
 /*
  * renameRoom()
  *
  * This is a sysop special fn -- it handles all room editing.
  * Returns:	TRUE on success else FALSE.
  */
-char renameRoom()
-{
-    void UpdateSharedForNewGen(AN_UNSIGNED gen);
+char renameRoom(){
     int c, r;
     char *dft, *buffer, wasRO, wasShared, wasAnon, *save, workbuf[200];
     extern char *APrivateRoom;
@@ -1223,31 +1292,6 @@ char renameRoom()
 }
 
 /*
- * UpdateSharedForNewGen()
- *
- * When a shared room is made private or invite only, the generation number
- * used to key sharedness is changed. Therefore, we need to update the shared
- * room database as appropriate.
- */
-static void UpdateSharedForNewGen(AN_UNSIGNED gen)
-{
-	extern SListBase SharedRooms;
-	void NewGen();
-
-	RunListA(&SharedRooms, NewGen, &gen);
-}
-
-static void NewGen(SharedRoomData *room, AN_UNSIGNED *gen)
-{
-printf("NG: room=%p, room->room=%p\n", room, room->room);
-	if (isSharedRoom(room->room) && netRoomSlot(room->room) == thisRoom) {
-printf("NG: Updating %d\n", room->slot);
-		room->srd_flags |= SRD_DIRTY;
-		room->room->srgen = (*gen) + 0x8000;
-	}
-}
-
-/*
  * WhoIsModerator()
  *
  * This handles adding moderating-type people.
@@ -1463,34 +1507,6 @@ void initialArchive(char *fn)
 }
 
 /*
- * knownHosts()
- *
- * This function handles setting systems as sharing the room currently in
- * roomBuf.
- *
- * NB: The caller to this function should call UpdateSharedRooms() after using
- * this function.
- */
-static int knownHosts(char *name, int ShType)
-{
-    SharedRoomData *room;
-
-    if (CmnNetList(name, &room, ERROR, "does not share this room with you")
-								== ERROR) {
-	return TRUE;
-    }
-
-    if (room == NULL)
-	if ((room = ListAsShared(name)) == NULL)
-	    return TRUE;
-
-    SetMode(room->room->mode, ShType);
-    room->srd_flags |= SRD_DIRTY;
-
-    return TRUE;
-}
-
-/*
  * ListAsShared()
  *
  * This function will find an empty share slot.
@@ -1601,30 +1617,6 @@ int doMakeWork(char *user, int val)
 	logTmp.lbrgen[thisRoom] = val;
 	putLog(&logTmp, target);
     }
-    return TRUE;
-}
-
-/*
- * killFromList()
- *
- * Kills systems from sharing a room.
- */
-static int killFromList(char *sysName, int arg)
-{
-    int slot;
-    SharedRoomData *room;
-
-    if ((slot=CmnNetList(sysName, &room, TRUE,
-			"does not net this room with you")) == ERROR)
-	return TRUE;
-
-    if (room != NULL) {
-	/* room->room->srgen = 0; */
-	room->room->sr_flags |= SR_NOTINUSE;
-	room->srd_flags |= SRD_DIRTY;
-    }
-
-    putNet(slot, &netBuf);
     return TRUE;
 }
 

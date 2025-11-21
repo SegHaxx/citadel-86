@@ -36,8 +36,43 @@ typedef struct {
     char *CmdLine;
 } Editor;
 
-void *EatEditorLine(char *line);
-void *FindEditorSelector();
+/*
+ * EatEditorLine()
+ *
+ * This will eat a line from editors.sys and return a variable of type
+ * Editor for use in list stuff.
+ *
+ * format is "<selector letter> <s.name> <command line>"
+ */
+static void *EatEditorLine(char *line){
+    Editor *work;
+    char   *c;
+
+    if ((c = strchr(line, ' ')) == NULL) return NULL;
+    if (line[0] == '"') {
+	line++;
+	if ((c = strchr(line, '"')) == NULL) return NULL;
+	*c = 0;
+	c++;
+    }
+    *c = 0;
+    work = GetDynamic(sizeof *work);
+    work->Name = strdup(line);
+    work->CmdLine = strdup(c + 1);
+    return work;
+}
+
+/*
+ * FindEditorSelector()
+ *
+ * This function will try to find which editor has been requested.  It is
+ * used in list handling.
+ */
+static void *FindEditorSelector(Editor *d, int *s){
+    if (d->Name[0] == *s)
+	return d;
+    return NULL;
+}
 
 static SListBase ExtEditors = { NULL, FindEditorSelector, NULL, NULL,
 							EatEditorLine };
@@ -107,30 +142,12 @@ void InitExternEditors()
 }
 
 /*
- * EatEditorLine()
+ * AddOurEditOpts()
  *
- * This will eat a line from editors.sys and return a variable of type
- * Editor for use in list stuff.
- *
- * format is "<selector letter> <s.name> <command line>"
+ * This is a work fn to add an external editor option to a list.
  */
-static void *EatEditorLine(char *line)
-{
-    Editor *work;
-    char   *c;
-
-    if ((c = strchr(line, ' ')) == NULL) return NULL;
-    if (line[0] == '"') {
-	line++;
-	if ((c = strchr(line, '"')) == NULL) return NULL;
-	*c = 0;
-	c++;
-    }
-    *c = 0;
-    work = GetDynamic(sizeof *work);
-    work->Name = strdup(line);
-    work->CmdLine = strdup(c + 1);
-    return work;
+static void AddOurEditOpts(Editor *d, char **TheOpts){
+    ExtraOption(TheOpts, d->Name);
 }
 
 /*
@@ -143,7 +160,16 @@ void OtherEditOptions(char **Options)
 {
     void AddOurEditOpts();
 
-    RunListA(&ExtEditors, AddOurEditOpts, (void *) Options);
+    RunListA(&ExtEditors, (void(*)(void*,void*))AddOurEditOpts, (void *) Options);
+}
+
+/*
+ * DisplayEditOpts()
+ *
+ * This is the work fn that actually will display the editing options.
+ */
+static void DisplayEditOpts(Editor *d){
+    mPrintf("<%c>%s\n ", d->Name[0], d->Name + 1);
 }
 
 /*
@@ -155,40 +181,7 @@ void ShowOutsideEditors()
 {
     void DisplayEditOpts();
 
-    RunList(&ExtEditors, DisplayEditOpts);
-}
-
-/*
- * DisplayEditOpts()
- *
- * This is the work fn that actually will display the editing options.
- */
-static void DisplayEditOpts(Editor *d)
-{
-    mPrintf("<%c>%s\n ", d->Name[0], d->Name + 1);
-}
-
-/*
- * AddOurEditOpts()
- *
- * This is a work fn to add an external editor option to a list.
- */
-static void AddOurEditOpts(Editor *d, char **TheOpts)
-{
-    ExtraOption(TheOpts, d->Name);
-}
-
-/*
- * FindEditorSelector()
- *
- * This function will try to find which editor has been requested.  It is
- * used in list handling.
- */
-static void *FindEditorSelector(Editor *d, int *s)
-{
-    if (d->Name[0] == *s)
-	return d;
-    return NULL;
+    RunList(&ExtEditors, (void(*)(void*))DisplayEditOpts);
 }
 
 /*

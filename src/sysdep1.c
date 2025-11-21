@@ -19,7 +19,7 @@
 #define NET_INTERNALS
 
 #include "ctdl.h"
-#include "sys\stat.h"
+#include "sys/stat.h"
 
 /*
  *				Contents

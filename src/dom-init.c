@@ -82,6 +82,17 @@ void UtilDomainInit(char FirstTime)
 }
 
 /*
+ * WriteDomainMap()
+ *
+ * This writes out an entry of the domain map.
+ */
+static void WriteDomainMap(DomainDir* data,FILE* fd){
+	if (data->HighFile > 0)
+		fprintf((FILE*)fd, "%d %s %d\n", data->MapDir, data->Domain,
+							data->HighFile);
+}
+
+/*
  * UpdateMap()
  *
  * This function is charged with updating MAP.SYS with new information.
@@ -90,26 +101,13 @@ void UtilDomainInit(char FirstTime)
 void UpdateMap()
 {
     SYS_FILE temp;
-    void WriteDomainMap();
     FILE *fd;
 
     makeSysName(temp, MAPSYS, &cfg.domainArea);
     if ((fd = fopen(temp, WRITE_TEXT)) != NULL) {
-	RunListA(&DomainMap, WriteDomainMap, fd);
+	RunListA(&DomainMap, (void(*)(void*,void*))&WriteDomainMap, fd);
 	fclose(fd);
     }
-}
-
-/*
- * WriteDomainMap()
- *
- * This writes out an entry of the domain map.
- */
-static void WriteDomainMap(DomainDir *data, FILE *fd)
-{
-	if (data->HighFile > 0)
-		fprintf(fd, "%d %s %d\n", data->MapDir, data->Domain,
-							data->HighFile);
 }
 
 typedef struct {
@@ -117,19 +115,6 @@ typedef struct {
 	int count;
 	char lc;
 } DO_Args;
-
-int UtilDomainOut(char (*f)(char *name, char *domain, char LocalCheck),
-						char LocalCheck)
-{
-	DO_Args args;
-	void SendDomainMail();
-
-	args.count = 0;
-	args.fn = f;
-	args.lc = LocalCheck;
-	RunListA(&DomainMap, SendDomainMail, &args);
-	return args.count;
-}
 
 /*
  * SendDomainMail()
@@ -140,7 +125,7 @@ int UtilDomainOut(char (*f)(char *name, char *domain, char LocalCheck),
  * will close up any "holes" left in the numerical naming sequence for mail
  * files.  That same later processing will also kill empty directories.
  */
-void SendDomainMail(DomainDir *data, DO_Args *args)
+static void SendDomainMail(DomainDir *data, DO_Args *args)
 {
     DOMAIN_FILE buffer;
     int rover, result;
@@ -166,3 +151,14 @@ void SendDomainMail(DomainDir *data, DO_Args *args)
     }
 }
 
+int UtilDomainOut(char (*f)(char *name, char *domain, char LocalCheck),
+						char LocalCheck)
+{
+	DO_Args args;
+
+	args.count = 0;
+	args.fn = f;
+	args.lc = LocalCheck;
+	RunListA(&DomainMap, (void(*)(void*,void*))&SendDomainMail, &args);
+	return args.count;
+}

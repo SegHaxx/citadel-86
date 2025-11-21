@@ -15,8 +15,10 @@
 #define SYSTEM_DEPENDENT
 
 #include "ctdl.h"
-#include "sys\stat.h"
+#include "sys/stat.h"
+#ifdef __MSDOS__
 #include "process.h"
+#endif
 
 /*
  *				Contents
@@ -47,32 +49,17 @@ DeCompElement DeComp[] = {
 	{ /* "compress.arc", */ "Arc",   NULL, NULL, NULL, NULL },
 };
 
-void CheckCompressedData(DirEntry *name);
-void MakeTempName(void);
-
-void *FindCompFormat();
-static SListBase CF = { NULL, FindCompFormat, NULL, NULL, NULL };
-
 /*
- * ArcInit()
+ * FindCompFormat()
  *
- * This initializes this module for handling the various variants of
- * compression/decompression.
+ * This function helps find a decompression record based on the given suffix.
  */
-void ArcInit()
-{
-    SYS_FILE name;
-
-    sprintf(name, "%c:%s", cfg.roomArea.saDisk + 'a',
-				cfg.codeBuf + cfg.roomArea.saDirname);
-
-    if (name[strlen(name) - 1] == '\\')	/* yech */
-	name[strlen(name) - 1] = 0;
-
-    SetSpace(name);
-    wildCard(CheckCompressedData, "compress.*", "", WC_NO_COMMENTS);
-    homeSpace();
+static void *FindCompFormat(DeCompElement *cr, char *suffix){
+    if (strCmpU(cr->Suffix, suffix) == 0) return cr;
+    return NULL;
 }
+
+static SListBase CF = { NULL, FindCompFormat, NULL, NULL, NULL };
 
 /*
  * CheckCompressedData()
@@ -114,6 +101,47 @@ static void CheckCompressedData(DirEntry *name)
 }
 
 /*
+ * ArcInit()
+ *
+ * This initializes this module for handling the various variants of
+ * compression/decompression.
+ */
+void ArcInit(){
+    SYS_FILE name;
+
+    sprintf(name, "%c:%s", cfg.roomArea.saDisk + 'a',
+				cfg.codeBuf + cfg.roomArea.saDirname);
+
+    if (name[strlen(name) - 1] == '\\')	/* yech */
+	name[strlen(name) - 1] = 0;
+
+    SetSpace(name);
+    wildCard(CheckCompressedData, "compress.*", "", WC_NO_COMMENTS);
+    homeSpace();
+}
+
+/*
+ * CheckSuff()
+ *
+ * This odd little function searches the list of decompression types that
+ * this installation supports to see if the given file matches any of the
+ * suffixes.  It so, it sets the filename in base to the complete filename
+ * and returns this element.
+ */
+static void *CheckSuff(DeCompElement *element, char *base){
+    char *dup, toReturn;
+
+    dup = strdup(base);
+    strcat(base, ".");
+    strcat(base, element->Suffix);
+    toReturn = (access(base, 4) == 0);
+    if (!toReturn) strcpy(base, dup);
+    free(dup);
+    if (toReturn) return element;
+    return NULL;
+}
+
+/*
  * SendArcFiles()
  *
  * This function gets arc filename, send specified contents.
@@ -125,7 +153,6 @@ void SendArcFiles(int protocol)
     struct stat statbuff;
     int  NumFiles;
     extern int thisRoom;
-    void *CheckSuff();
     extern long netBytes;
     DeCompElement *CR;
     extern char *UploadLog;
@@ -203,55 +230,17 @@ void SendArcFiles(int protocol)
 }
 
 /*
- * CheckSuff()
- *
- * This odd little function searches the list of decompression types that
- * this installation supports to see if the given file matches any of the
- * suffixes.  It so, it sets the filename in base to the complete filename
- * and returns this element.
- */
-static void *CheckSuff(DeCompElement *element, char *base)
-{
-    char *dup, toReturn;
-
-    dup = strdup(base);
-    strcat(base, ".");
-    strcat(base, element->Suffix);
-    toReturn = (access(base, 4) == 0);
-    if (!toReturn) strcpy(base, dup);
-    free(dup);
-    if (toReturn) return element;
-    return NULL;
-}
-
-/*
  * MakeTempDir()
  *
  * This function will create and move into a temporary directory.
  */
-void MakeTempDir()
-{
-    MakeTempName();
-
+void MakeTempDir(){
+#ifdef __MSDOS__
     if (mkdir(TDirBuffer) != 0)
+#endif
 	mPrintf("System error with mkdir!\n ");
     chdir(TDirBuffer);
     getcwd(TDirBuffer, 120);
-}
-
-/*
- * MakeTempName()
- *
- * This function gets a temporary name.
- */
-static void MakeTempName()
-{
-	static char *seed = "8ys6%d";
-	int i = 0;
-
-	sprintf(TDirBuffer, seed, i++);
-	while (access(TDirBuffer, 0) != -1)
-		sprintf(TDirBuffer, seed, i++);
 }
 
 #define BAT_FILE	\
@@ -262,6 +251,20 @@ exit\n\
 :good\n\
 echo 0 >%s\n\
 exit\n"
+
+/*
+ * MakeTempName()
+ *
+ * This function gets a temporary name.
+ */
+static void MakeTempName(){
+	static char *seed = "8ys6%d";
+	int i = 0;
+
+	sprintf(TDirBuffer, seed, i++);
+	while (access(TDirBuffer, 0) != -1)
+		sprintf(TDirBuffer, seed, i++);
+}
 
 /*
  * FileIntegrity()
@@ -425,17 +428,6 @@ int GetUserCompression()
 		case 'A': return ARC_COMP;
 		default:  return NO_COMP;
 	}
-}
-
-/*
- * FindCompFormat()
- *
- * This function helps find a decompression record based on the given suffix.
- */
-static void *FindCompFormat(DeCompElement *cr, char *suffix)
-{
-    if (strCmpU(cr->Suffix, suffix) == 0) return cr;
-    return NULL;
 }
 
 void ReadExternalDir(char *name)

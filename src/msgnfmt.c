@@ -31,15 +31,52 @@ char   PrTransmit = TRUE;	/* TRUE if writing to comm line */
 				/* FALSE if writing to disk	*/
 static char Overrode;
 
-void WriteField();
-void NetCC();
-
 #define CC		0
 #define OVERRIDE	1
 #define NONE		2
 
 static char *GoingFor;
 static int (*sm)(int c);
+/*
+ * NetCC()
+ *
+ * This function is used to write out Other Recipient fields and sometimes
+ * to write override fields (only when system origin is this system, not
+ * another, however).
+ */
+static void NetCC(char *d)
+{
+	ForwardMail *address;
+	label person;
+	char  system[(2 * NAMESIZE) + 2];
+	NetBuffer locnet;
+
+	initNetBuf(&locnet);
+	switch (SepNameSystem(d, person, system, &locnet)) {
+	case IS_SYSTEM:
+		if (strCmpU(system, GoingFor) == SAMESTRING ||
+			strCmpU(LocalName(system), GoingFor) == SAMESTRING) {
+			Overrode = TRUE;
+			NetPrintf(sm, "w%s", person);
+		}
+		break;
+	case NOT_SYSTEM:	/* forward to this system??? */
+		if ((address = SearchList(&MailForward, person)) != NULL &&
+			strCmpU(address->System, GoingFor) == SAMESTRING) {
+			Overrode = TRUE;
+			NetPrintf(sm, "w%s", address->Alias);
+		}
+		break;
+	}
+	killNetBuf(&locnet);
+}
+
+static void WriteField(char *d, int FieldType)
+{
+	NetPrintf(sm, (FieldType == OVERRIDE) ? "w%s" :
+					(FieldType == CC) ? "W%s" : "%s", d);
+}
+
 /*
  * prNetStyle()
  *
@@ -89,7 +126,7 @@ void prNetStyle(int NotMsgBase, int (*SourceFn)(void),
 		if (!NetPrintf(sm, "P%s", msgBuf.mbOther)) return;
 
 	/* write out Who Else fields */
-	RunListA(&msgBuf.mbCC, WriteField, (void *) CC);
+	RunListA(&msgBuf.mbCC, (void(*)(void*,void*))WriteField, (void *) CC);
 
 	Overrode = FALSE;
 	/*
@@ -138,7 +175,7 @@ void prNetStyle(int NotMsgBase, int (*SourceFn)(void),
 	 * system) so we just write them out, and everything's cool.
 	 */
 	else if (NotMsgBase && PrTransmit && inNet != NON_NET) {
-		RunListA(&msgBuf.mbOverride, WriteField, (void *) OVERRIDE);
+		RunListA(&msgBuf.mbOverride, (void(*)(void*,void*))WriteField, (void *) OVERRIDE);
 	}
 
 	if (msgBuf.mbaddr[ 0] && (!PrTransmit || Overrode)) {
@@ -185,51 +222,11 @@ void prNetStyle(int NotMsgBase, int (*SourceFn)(void),
 	}
 	else if (msgBuf.mbto[0]) if (!NetPrintf(sm, "T%s", msgBuf.mbto)) return;
 
-	RunListA(&msgBuf.mbForeign, WriteField, (void *) NONE);
+	RunListA(&msgBuf.mbForeign, (void(*)(void*,void*))WriteField, (void *) NONE);
 
 	/* send message text proper: */
 	if (GetMsg) {
 		getMsgStr(SourceFn, msgBuf.mbtext, MAXTEXT);
 	}
 	if (!NetPrintf(sm, "M%s", msgBuf.mbtext)) return;
-}
-
-/*
- * NetCC()
- *
- * This function is used to write out Other Recipient fields and sometimes
- * to write override fields (only when system origin is this system, not
- * another, however).
- */
-static void NetCC(char *d)
-{
-	ForwardMail *address;
-	label person;
-	char  system[(2 * NAMESIZE) + 2];
-	NetBuffer locnet;
-
-	initNetBuf(&locnet);
-	switch (SepNameSystem(d, person, system, &locnet)) {
-	case IS_SYSTEM:
-		if (strCmpU(system, GoingFor) == SAMESTRING ||
-			strCmpU(LocalName(system), GoingFor) == SAMESTRING) {
-			Overrode = TRUE;
-			NetPrintf(sm, "w%s", person);
-		}
-		break;
-	case NOT_SYSTEM:	/* forward to this system??? */
-		if ((address = SearchList(&MailForward, person)) != NULL &&
-			strCmpU(address->System, GoingFor) == SAMESTRING) {
-			Overrode = TRUE;
-			NetPrintf(sm, "w%s", address->Alias);
-		}
-		break;
-	}
-	killNetBuf(&locnet);
-}
-
-static void WriteField(char *d, int FieldType)
-{
-	NetPrintf(sm, (FieldType == OVERRIDE) ? "w%s" :
-					(FieldType == CC) ? "W%s" : "%s", d);
 }

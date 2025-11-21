@@ -5,9 +5,8 @@
  * Now includes only #defines and structs.
  */
 
-#include "stdio.h"
-#include "slist.h"
 #include "sysdep.h"
+#include "slist.h"
 
 #define CTDL_HEADER     1
 

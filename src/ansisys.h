@@ -395,7 +395,7 @@ long chkTimeSince(int TimerId);
 void CheckForFax(void);
 #endif
 
-#ifndef CallChat()
+#ifndef CallChat
 void CallChat(int limit, int flags);
 #endif
 
@@ -464,7 +464,7 @@ void ClearDoorTimers(void);
 #endif
 
 #ifndef Cumulate
-void Cumulate();
+//void Cumulate();
 #endif
 
 #ifndef BackFromDoor
@@ -590,7 +590,7 @@ int GetUserCompression(void);
 char *GetCompEnglish(char CompType);
 #endif
 
-#ifndef AnyCompression()
+#ifndef AnyCompression
 char AnyCompression(void);
 #endif
 
@@ -764,7 +764,7 @@ void GetDomainDirs(SListBase *list);
  * These functions are in SysUtil.C.
  */
 
-#ifndef getUtilDate(int *year, int *month, int *day, int *hours, int *minutes);
+#ifndef getUtilDate
 void getUtilDate(int *year, int *month, int *day, int *hours, int *minutes);
 #endif
 

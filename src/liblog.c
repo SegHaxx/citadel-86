@@ -35,33 +35,41 @@ typedef struct {
         int detested_slot;
 } IgnoreUserMailRecord;
 
-// Remove the specified author/target pair from the list of ignored users.
-// If target is -1, all entries pertaining to source are removed
-// (for instance, if a user is deleted or rolled over). Same if source is -1.
-int IgMailRemoveEntries(int source,int target){
-	IgnoreUserMailRecord mr;
-	int tracker;
-	if((upfd=fopen(IgnoreMailFileName,R_W_ANY))==NULL)
-		return TRUE;
+/*
+ * IgMailRemoveEntries
+ *
+ * This function removes the specified author/target pair from the list of
+ * ignored users.  If target is -1, all entries pertaining to source are
+ * removed (for instance, if a user is deleted or rolled over).  Same if
+ * source is -1.
+ */
+int IgMailRemoveEntries(int source, int target){
+        IgnoreUserMailRecord mr;
+        int tracker;
 
-	for(tracker=0;
-		fread(&mr,1,sizeof mr,upfd)==sizeof(mr);
-		++tracker)
-	{
-		if((mr.auth_slot==source&&mr.detested_slot==target)||
-			(source==-1&&mr.detested_slot==target)||
-			(mr.auth_slot==source&&target==-1))
-		{
-			mr.auth_slot=-1;
-			mr.detested_slot=-1;
-			fseek(upfd,tracker*sizeof(mr),0);
-			fwrite(&mr,1,sizeof(mr),upfd);
-			IgnoreMailDisturbed=TRUE;
-		}
-	}
-	fclose(upfd);
-	return TRUE;
+        if ((upfd = fopen(IgnoreMailFileName, R_W_ANY)) == NULL) {
+                return TRUE;
+        }
+
+        for (tracker = 0;
+             fread(&mr, 1, sizeof mr, upfd) == sizeof mr;
+             tracker++) {
+                if ((mr.auth_slot == source && mr.detested_slot == target) ||
+                    (source == -1 && mr.detested_slot == target) ||
+                    (mr.auth_slot == source && target == -1)) {
+                        mr.auth_slot = -1;
+                        mr.detested_slot = -1;
+                        fseek(upfd, tracker * sizeof mr, 0);
+                        fwrite(&mr, 1, sizeof mr, upfd);
+                        IgnoreMailDisturbed = TRUE;
+                }
+        }
+
+        fclose(upfd);
+
+        return TRUE;
 }
+
 
 /*
  * getLog()
@@ -137,6 +145,13 @@ void putLog(logBuffer *lBuf, int n)
     fflush(logfl);
 }
 
+static void *RemoveModerator(NumToString *element, char *name)
+{
+	if (strCmpU(element->string, name) == 0)
+		return element;
+	return NULL;
+}
+
 char	*LCHeld = "log%d.hld";
 /*
  * RemoveUser()
@@ -148,7 +163,6 @@ void RemoveUser(int logNo, logBuffer *lBuf)
 	extern SListBase Moderators;
 	extern SListBase MailForward;
 	SYS_FILE killHeld;
-	void *RemoveModerator();
 	char heldbuf[20];
 
 	/* remove old held message */
@@ -175,12 +189,3 @@ void RemoveUser(int logNo, logBuffer *lBuf)
 	IgMailRemoveEntries(logNo, -1);
 	IgMailRemoveEntries(-1, logNo);
 }
-
-
-static void *RemoveModerator(NumToString *element, char *name)
-{
-	if (strCmpU(element->string, name) == 0)
-		return element;
-	return NULL;
-}
-

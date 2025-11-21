@@ -14,6 +14,7 @@
 #define NET_INTERFACE
 
 #include "ctdl.h"
+#include <errno.h>
 
 /*
  *				contents
@@ -394,54 +395,30 @@ void DiscardMessage(char *name, char *filename)
     }
 }
 
-/*
- * netController()
- *
- * This function acts as a buffer between netControllerWork and the rest of
- * the world.  It handles all important de-initializations and initializations.
- */
-void netController(int NetStart, int NetLength, MULTI_NET_DATA whichNets,
-						char mode, UNS_16 flags)
-{
-	SYS_FILE AideMsg;
+// This function attempts to call some other system.
+static SystemCallRecord *callOut(int i){
+	SystemCallRecord *called;
 
-	void netControllerWork(int NetStart, int NetLength,
-				MULTI_NET_DATA whichNets,
-				char mode, UNS_16 flags);
-
-	if (loggedIn)	/* should only happen on mistake by sysop */
-		terminate( /* hangUp == */ TRUE, TRUE);
-
-	switch (mode) {
-	case ANYTIME_NET:
-	case UNTIL_NET:
-		if (!AnyCallsNeeded(whichNets)) {
-			return;
-		}
-		break;
-	case ANY_CALL:
-		while (MIReady()) Citinp();
-		break;
+	/*
+	 * hopefully, the only place we add stuff to SystemsCalled
+	 */
+	if ((called = SearchList(&SystemsCalled, &i)) == NULL) {
+		called = NewCalledRecord(i);
 	}
-
-	if (logNetResults) {
-		makeSysName(AideMsg, "netlog.sys", &cfg.netArea);
-		if ((netLog = fopen(AideMsg, APPEND_TEXT)) == NULL)
-			netResult("Network Logging: Couldn't open netLog.");
-		}
-	else
-		netLog = NULL;
-
-	netControllerWork(NetStart, NetLength, whichNets, mode, flags);
-	inNet = NON_NET;
-	KillList(&SystemsCalled);
-	if (logNetResults) {
-		fclose(netLog);
-		netLog = NULL;
+	getNet(callSlot = i, &netBuf);
 	{char timebuf[13];
 	splitF(netLog, "Calling %s @ %s (%s): ",
 			netBuf.netName, netBuf.netId, Current_Time(timebuf));}
+	strcpy(normed, netBuf.netId);		/* Cosmetics */
+	strcpy(callerId, netBuf.netId);
+	strcpy(callerName, netBuf.netName);
+	if (makeCall(TRUE, NO_MENU)) {
+		modStat = haveCarrier = TRUE;
+		return called;
 	}
+	killConnection("callout");	/* Take modem out of call mode   */
+	splitF(netLog, "No luck.\n");
+	return NULL;
 }
 
 /*
@@ -453,8 +430,7 @@ void netController(int NetStart, int NetLength, MULTI_NET_DATA whichNets,
  * etc.
  */
 static void netControllerWork(int NetStart, int NetLength,
-			MULTI_NET_DATA whichNets, char mode, UNS_16 flags)
-{
+			MULTI_NET_DATA whichNets, char mode, UNS_16 flags){
 	SystemCallRecord *called;
 	SYS_FILE AideMsg;
 	int x;
@@ -614,6 +590,49 @@ static void netControllerWork(int NetStart, int NetLength,
 	getRoom(LOBBY);
 }
 
+/*
+ * netController()
+ *
+ * This function acts as a buffer between netControllerWork and the rest of
+ * the world.  It handles all important de-initializations and initializations.
+ */
+void netController(int NetStart, int NetLength, MULTI_NET_DATA whichNets,
+						char mode, UNS_16 flags)
+{
+	SYS_FILE AideMsg;
+
+	if (loggedIn)	/* should only happen on mistake by sysop */
+		terminate( /* hangUp == */ TRUE, TRUE);
+
+	switch (mode) {
+	case ANYTIME_NET:
+	case UNTIL_NET:
+		if (!AnyCallsNeeded(whichNets)) {
+			return;
+		}
+		break;
+	case ANY_CALL:
+		while (MIReady()) Citinp();
+		break;
+	}
+
+	if (logNetResults) {
+		makeSysName(AideMsg, "netlog.sys", &cfg.netArea);
+		if ((netLog = fopen(AideMsg, APPEND_TEXT)) == NULL)
+			netResult("Network Logging: Couldn't open netLog.");
+		}
+	else
+		netLog = NULL;
+
+	netControllerWork(NetStart, NetLength, whichNets, mode, flags);
+	inNet = NON_NET;
+	KillList(&SystemsCalled);
+	if (logNetResults) {
+		fclose(netLog);
+		netLog = NULL;
+	}
+}
+
 static int RunUntil;
 
 /*
@@ -651,33 +670,14 @@ int timeLeft()
 }
 
 /*
- * callOut()
+ * FindSentRoom()
  *
- * This function attempts to call some other system.
+ * This function helps find a room record in a list of such records.  The record
+ * is just a pointer to an integer.
  */
-static SystemCallRecord *callOut(int i)
-{
-	SystemCallRecord *called;
-
-	/*
-	 * hopefully, the only place we add stuff to SystemsCalled
-	 */
-	if ((called = SearchList(&SystemsCalled, &i)) == NULL) {
-		called = NewCalledRecord(i);
-	}
-	getNet(callSlot = i, &netBuf);
-	{char timebuf[13];
-	splitF(netLog, "Calling %s @ %s (%s): ",
-			netBuf.netName, netBuf.netId, Current_Time(timebuf));}
-	strcpy(normed, netBuf.netId);		/* Cosmetics */
-	strcpy(callerId, netBuf.netId);
-	strcpy(callerName, netBuf.netName);
-	if (makeCall(TRUE, NO_MENU)) {
-		modStat = haveCarrier = TRUE;
-		return called;
-	}
-	killConnection("callout");	/* Take modem out of call mode   */
-	splitF(netLog, "No luck.\n");
+static void *FindSentRoom(int *room, int *target){
+	if (*room == *target)
+		return room;
 	return NULL;
 }
 
@@ -687,10 +687,8 @@ static SystemCallRecord *callOut(int i)
  * This function correctly creates, initializes, and adds to SystemsCalled a
  * new SystemCallRecord.
  */
-SystemCallRecord *NewCalledRecord(int slot)
-{
+SystemCallRecord *NewCalledRecord(int slot){
 	SystemCallRecord *called;
-	void *FindSentRoom();
 
 	called = GetDynamic(sizeof *called);
 	called->Status = SYSTEM_NOT_CALLED;
@@ -700,19 +698,6 @@ SystemCallRecord *NewCalledRecord(int slot)
 	InitListValues(&called->SentVirtualRooms,FindSentRoom,NULL,free,NULL);
 	AddData(&SystemsCalled, called, NULL, FALSE);
 	return called;
-}
-
-/*
- * FindSentRoom()
- *
- * This function helps find a room record in a list of such records.  The record
- * is just a pointer to an integer.
- */
-static void *FindSentRoom(int *room, int *target)
-{
-	if (*room == *target)
-		return room;
-	return NULL;
 }
 
 /*
@@ -815,14 +800,43 @@ void writeNet(char idsAlso, char LocalOnly)
 }
 
 /*
+ * ROutGoing()
+ *
+ * This decides if the system in question needs to be called due to the
+ * situation of the rooms.
+ */
+static int ROutGoing(SharedRoomData *room, int system, int roomslot, void *d){
+    char *arg;
+
+    arg = d;
+    if (GetMode(room->room->mode) == BACKBONE) {
+	if (inNet == NORMAL_NET) {
+	    *arg = TRUE;
+	    return ERROR;
+	}
+    }
+    if (
+	roomTab[roomslot].rtlastNetAll > room->room->lastMess ||
+	(GetMode(room->room->mode) == BACKBONE &&
+		roomTab[roomslot].rtlastNetBB > room->room->lastMess)
+	) {
+	*arg = TRUE;
+	return ERROR;
+    }
+    if (GetFA(room->room->mode)) {
+	*arg = TRUE;
+	return ERROR;
+    }
+    return TRUE;
+}
+
+/*
  * roomsShared()
  *
  * This function returns TRUE if this system has a room with new data to share
  * (orSomething).
  */
-static char roomsShared(int slot)
-{
-	int ROutGoing(SharedRoomData *room, int system, int roomslot, void *d);
+static char roomsShared(int slot){
 	char OutGoing;
 	SystemCallRecord *called;
 
@@ -859,38 +873,6 @@ static char roomsShared(int slot)
 	OutGoing = FALSE;
 	EachSharedRoom(slot, ROutGoing, VRNeedCall, &OutGoing);
 	return OutGoing;
-}
-
-/*
- * ROutGoing()
- *
- * This decides if the system in question needs to be called due to the
- * situation of the rooms.
- */
-static int ROutGoing(SharedRoomData *room, int system, int roomslot, void *d)
-{
-    char *arg;
-
-    arg = d;
-    if (GetMode(room->room->mode) == BACKBONE) {
-	if (inNet == NORMAL_NET) {
-	    *arg = TRUE;
-	    return ERROR;
-	}
-    }
-    if (
-	roomTab[roomslot].rtlastNetAll > room->room->lastMess ||
-	(GetMode(room->room->mode) == BACKBONE &&
-		roomTab[roomslot].rtlastNetBB > room->room->lastMess)
-	) {
-	*arg = TRUE;
-	return ERROR;
-    }
-    if (GetFA(room->room->mode)) {
-	*arg = TRUE;
-	return ERROR;
-    }
-    return TRUE;
 }
 
 /*

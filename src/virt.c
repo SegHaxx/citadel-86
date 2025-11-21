@@ -112,17 +112,36 @@ typedef struct {
 } VirtArgs;
 
 /*
+ * SetLastVirtualSent()
+ *
+ * This function sets the last message value of a given shard room if it matches
+ * with the target specified in the args argument.
+ */
+static int SetLastVirtualSent(SharedRoomData *room, int system, int roomslot, void *d){
+    VirtArgs *args;
+
+    args = d;
+    if (roomslot == args->target) {
+	if (args->local)
+	    room->room->lastPeon = VRoomTab[roomslot].vrHiLocal;
+	else
+	    room->room->lastMess = VRoomTab[roomslot].vrHiLD;
+	room->srd_flags |= SRD_DIRTY;
+	return ERROR;
+    }
+    return TRUE;
+}
+
+
+/*
  * VirtSummary()
  *
  * This function handles post-call cleanup.
  */
-void VirtSummary(char SetOutGoing)
-{
+void VirtSummary(char SetOutGoing){
 #ifndef NO_VIRTUAL_ROOMS
 	int rover;
 	VirtArgs args;
-	int SetLastVirtualSent(SharedRoomData *room, int system, int roomslot,
-								void *d);
 
 	for (rover = 0; rover < VirtSize; rover++) {
 		args.target = rover;
@@ -141,27 +160,3 @@ void VirtSummary(char SetOutGoing)
 	}
 #endif
 }
-
-/*
- * SetLastVirtualSent()
- *
- * This function sets the last message value of a given shard room if it matches
- * with the target specified in the args argument.
- */
-static int SetLastVirtualSent(SharedRoomData *room, int system, int roomslot,
-								void *d)
-{
-    VirtArgs *args;
-
-    args = d;
-    if (roomslot == args->target) {
-	if (args->local)
-	    room->room->lastPeon = VRoomTab[roomslot].vrHiLocal;
-	else
-	    room->room->lastMess = VRoomTab[roomslot].vrHiLD;
-	room->srd_flags |= SRD_DIRTY;
-	return ERROR;
-    }
-    return TRUE;
-}
-

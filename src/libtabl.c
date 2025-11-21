@@ -52,6 +52,23 @@ static const char* indexTable="ctdlTabl.sys";
 // Delete ctdlTabl.sys from disk
 void indexTable_delete(void){unlink(indexTable);}
 
+/*
+ * common_read()
+ *
+ * This function reads in from file the important stuff.
+ * returns:	TRUE on success, else FALSE
+ */
+static int common_read(void *block, int size, int elements, FILE *fd,
+								char showMsg)
+{
+    if (size == 0) return TRUE;
+    if (fread(block, size, elements, fd) != 1) {
+	if (showMsg) printf(msg1);
+	return FALSE;
+    }
+    return TRUE;
+}
+
 label HomeId;
 /*
  * readSysTab()
@@ -183,20 +200,14 @@ char readSysTab(char kill, char showMsg)
 }
 
 /*
- * common_read()
+ * WriteServers()
  *
- * This function reads in from file the important stuff.
- * returns:	TRUE on success, else FALSE
+ * This function writes a domain server out to ctdltabl.sys.  See DOMAINS.C
+ * for more information on this list.
  */
-static int common_read(void *block, int size, int elements, FILE *fd,
-								char showMsg)
+static void WriteServers(void* name,void* fd)
 {
-    if (size == 0) return TRUE;
-    if (fread(block, size, elements, fd) != 1) {
-	if (showMsg) printf(msg1);
-	return FALSE;
-    }
-    return TRUE;
+    fwrite((char*)name, NAMESIZE, 1, (FILE*)fd);
 }
 
 /*
@@ -208,7 +219,6 @@ static int common_read(void *block, int size, int elements, FILE *fd,
  */
 int writeSysTab()
 {
-    void WriteServers();
     int	rover;
     FILE *fd;
     extern char   *WRITE_ANY;
@@ -242,17 +252,6 @@ int writeSysTab()
 
     fclose(fd);
     return(TRUE);
-}
-
-/*
- * WriteServers()
- *
- * This function writes a domain server out to ctdltabl.sys.  See DOMAINS.C
- * for more information on this list.
- */
-static void WriteServers(char *name, FILE *fd)
-{
-    fwrite(name, NAMESIZE, 1, fd);
 }
 
 /* #define MORE_DEBUG */

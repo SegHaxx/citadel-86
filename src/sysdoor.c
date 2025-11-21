@@ -55,7 +55,6 @@ extern char ExitToMsdos, *WRITE_ANY;
 extern FILE *upfd;
 extern long Door_Limit;
 
-char RunDoorImmediate(int door);
 /*
  * InitDoors()
  *
@@ -89,6 +88,34 @@ void InitDoors()
     }
 
     fclose(fd);
+}
+
+/*
+ * ShowDoors()
+ *
+ * This will show the doors available.
+ */
+static char ShowDoors(FILE *fd){
+    DoorData DoorInfo;
+    int      DoorCount = 0;
+
+    while (fread(&DoorInfo, sizeof DoorInfo, 1, fd) != 0 && outFlag == OUTOK) {
+	if (!(DoorInfo.flags & DOOR_AUTO) && !(DoorInfo.flags & DOOR_NEWUSER) &&
+	    !(DoorInfo.flags & DOOR_ONLOGIN))
+	    if (((DoorInfo.flags & DOOR_AIDE)  && aide) ||
+	    ((DoorInfo.flags & DOOR_SYSOP) && HalfSysop()) ||
+	    !(DoorInfo.flags & (DOOR_SYSOP | DOOR_AIDE)))
+	    if (!DoorInfo.RoomName[0] ||
+		strCmpU(DoorInfo.RoomName, roomBuf.rbname) == SAMESTRING) {
+		DoorCount++;
+		doCR();
+		mPrintf("%-10s: %s", DoorInfo.entrycode, DoorInfo.description);
+	    }
+    }
+
+    doCR();
+    fseek(fd, 0l, 0);
+    return (DoorCount != 0);
 }
 
 /*
@@ -167,6 +194,34 @@ char doDoor(char moreYet)
 }
 
 /*
+ * Message()
+ *
+ * This will write a message and return.
+ */
+static char Message(char *msg){
+    mPrintf(msg);
+    return FALSE;
+}
+
+/*
+ * NoTimeForDoor()
+ *
+ * This will see if there is still time to run the door.
+ */
+static char NoTimeForDoor(int which, DoorData *DoorInfo){
+    TwoNumbers search;
+    int	*found;
+
+    if (DoorInfo->TimeLimit == -1) return FALSE;
+
+    search.first = which;
+    if ((found = (int *) SearchList(&DoorTime, &search)) != NULL)
+	return ((*found) / 60l >= (long) DoorInfo->TimeLimit);
+
+    return FALSE;
+}
+
+/*
  * CheckDoorPriv()
  *
  * True if this user can use door.
@@ -188,17 +243,6 @@ char CheckDoorPriv(DoorData *DoorInfo, int Count, char NormalDoor)
     else if (NormalDoor && NoTimeForDoor(Count, DoorInfo))
 	return Message("Sorry, you may not use that door any longer.\n ");
     return TRUE;
-}
-
-/*
- * Message()
- *
- * This will write a message and return.
- */
-static char Message(char *msg)
-{
-    mPrintf(msg);
-    return FALSE;
 }
 
 /*
@@ -271,35 +315,6 @@ char RunAutoDoor(int i, char ask)
 	return TRUE;
 }
 
-/*
- * ShowDoors()
- *
- * This will show the doors available.
- */
-static char ShowDoors(FILE *fd)
-{
-    DoorData DoorInfo;
-    int      DoorCount = 0;
-
-    while (fread(&DoorInfo, sizeof DoorInfo, 1, fd) != 0 && outFlag == OUTOK) {
-	if (!(DoorInfo.flags & DOOR_AUTO) && !(DoorInfo.flags & DOOR_NEWUSER) &&
-	    !(DoorInfo.flags & DOOR_ONLOGIN))
-	    if (((DoorInfo.flags & DOOR_AIDE)  && aide) ||
-	    ((DoorInfo.flags & DOOR_SYSOP) && HalfSysop()) ||
-	    !(DoorInfo.flags & (DOOR_SYSOP | DOOR_AIDE)))
-	    if (!DoorInfo.RoomName[0] ||
-		strCmpU(DoorInfo.RoomName, roomBuf.rbname) == SAMESTRING) {
-		DoorCount++;
-		doCR();
-		mPrintf("%-10s: %s", DoorInfo.entrycode, DoorInfo.description);
-	    }
-    }
-
-    doCR();
-    fseek(fd, 0l, 0);
-    return (DoorCount != 0);
-}
-
 #ifdef NEEDED
 
 /* strictly for cheating */
@@ -314,6 +329,14 @@ struct timeData {
 
 #endif
 
+/*
+ * Cumulate()
+ *
+ * This will find out how much time has been used by current user.
+ */
+static void Cumulate(TwoNumbers *temp){
+    DoorsUsed += temp->second;	/* cumulate it ... */
+}
 
 /*
  * BackFromDoor()
@@ -360,7 +383,7 @@ char BackFromDoor()
 	MakeList(&DoorTime, "", fd);
 	fclose(fd);
 	unlink("dorinfo3.def");
-	RunList(&DoorTime, Cumulate);
+	RunList(&DoorTime, (void(*)(void*))&Cumulate);
 	/* InitEvents(FALSE); */
     }
     temp = (TwoNumbers *) GetDynamic(sizeof *temp);
@@ -398,28 +421,7 @@ char BackFromDoor()
     return TRUE;
 }
 
-/*
- * NewUserDoor()
- *
- * This runs a validation door.
- */
-char NewUserDoor()
-{
-    return RunDoorImmediate(TheNewUserDoor);
-}
-
-/*
- * LoggedInDoor()
- *
- * This is responsible for running a door on login if specified.
- */
-char LoggedInDoor(void)
-{
-    return RunDoorImmediate(TheAllUserDoor);
-}
-
-static char RunDoorImmediate(int door)
-{
+static char RunDoorImmediate(int door){
     FILE	*fd;
     SYS_FILE    name;
     DoorData    DoorInfo;
@@ -459,22 +461,23 @@ static char RunDoorImmediate(int door)
 }
 
 /*
- * NoTimeForDoor()
+ * NewUserDoor()
  *
- * This will see if there is still time to run the door.
+ * This runs a validation door.
  */
-static char NoTimeForDoor(int which, DoorData *DoorInfo)
+char NewUserDoor()
 {
-    TwoNumbers search;
-    int	*found;
+    return RunDoorImmediate(TheNewUserDoor);
+}
 
-    if (DoorInfo->TimeLimit == -1) return FALSE;
-
-    search.first = which;
-    if ((found = (int *) SearchList(&DoorTime, &search)) != NULL)
-	return ((*found) / 60l >= (long) DoorInfo->TimeLimit);
-
-    return FALSE;
+/*
+ * LoggedInDoor()
+ *
+ * This is responsible for running a door on login if specified.
+ */
+char LoggedInDoor(void)
+{
+    return RunDoorImmediate(TheAllUserDoor);
 }
 
 /*
@@ -485,16 +488,6 @@ static char NoTimeForDoor(int which, DoorData *DoorInfo)
 void ClearDoorTimers()
 {
     KillList(&DoorTime);
-}
-
-/*
- * Cumulate()
- *
- * This will find out how much time has been used by current user.
- */
-static void Cumulate(TwoNumbers *temp)
-{
-    DoorsUsed += temp->second;	/* cumulate it ... */
 }
 
 /*

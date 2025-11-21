@@ -57,18 +57,6 @@ typedef struct {
 	VORTEX     data;
 } Vortex;
 
-void *CheckVt();
-void FreeVt();
-
-/*
- * VortexList
- *
- * This is a list of systems found during a session of adding messages.  The
- * list is used for performance reasons.  When a session is over this list
- * is used to update our records on disk all at once..
- */
-SListBase VortexList = { NULL, CheckVt, NULL, FreeVt, NULL };
-
 char VortexHandle = FALSE;
 
 /*
@@ -206,7 +194,6 @@ static UNS_16 TopVx = 0;
 
 extern char *READ_ANY, *APPEND_ANY;
 extern char *R_W_ANY, *WRITE_ANY;
-int searchVortex(char *id, VtRecord *VtSystem);
 
 /*
  * VortexInit()
@@ -247,6 +234,100 @@ void VortexInit()
 void InitVortexing()
 {
 }
+
+/*
+ * CheckVt()
+ *
+ * This function is used to search the list of vortex records for a given
+ * system.
+ */
+void *CheckVt(Vortex *d, char *s){
+    return (strCmpU(d->System, s) == SAMESTRING) ? d : NULL;
+}
+
+/*
+ * searchVortex()
+ *
+ * This function will search the vortex list for the given system.  It
+ * return ERROR if the system is not in the database, otherwise an index
+ * into it in terms of records.
+ */
+static int searchVortex(char *id, VtRecord *VtSystem){
+    int      rover;
+    UNS_16   hval;
+    FILE     *fd = NULL;
+    SYS_FILE name;
+
+    makeSysName(name, "vortex.sys", &cfg.netArea);
+    if ((fd = fopen(name, READ_ANY)) == NULL) return ERROR;
+    hval = hash(id);
+    for (rover = 0; rover < TopVx; rover++) {
+	if (VI[rover] == hval) {
+	    if (fd == NULL)
+		if ((fd = fopen(name, READ_ANY)) == NULL) return ERROR;
+	    fseek(fd, rover * sizeof *VtSystem, 0);
+	    if (fread(VtSystem, sizeof *VtSystem, 1, fd) > 0) {
+		if (strCmpU(id, VtSystem->Id) == SAMESTRING) break;
+	    }
+	}
+    }
+    if (fd != NULL)
+    	fclose(fd);
+    return (rover == TopVx) ? ERROR : rover;
+}
+
+static int errors;
+/*
+ * FreeVt()
+ *
+ * This will write and free an element of the vortex list; obviously, it is
+ * used in list handling.
+ */
+static void FreeVt(Vortex *d){
+    label    temp;
+    SYS_FILE vortex;
+    FILE     *fd;
+    VtRecord VtSystem;
+
+    if (d->Current > d->data.vHighest)
+	d->data.vHighest = d->Current;
+
+    if (d->DateCurrent > d->data.vLastDate)
+	d->data.vLastDate = d->DateCurrent;
+
+    sprintf(temp, "%d.vex", d->SystemNum);
+    makeSysName(vortex, temp, &cfg.netArea);
+    if ((fd = fopen(vortex, R_W_ANY)) == NULL) {
+	if ((fd = fopen(vortex, WRITE_ANY)) == NULL) {
+	    splitF(netLog, "Couldn't create %s!!\n", vortex);
+	}
+    }
+    else {
+	fseek(fd, d->Slot * sizeof d->data, 0);
+    }
+
+    if (fd != NULL) {
+	putVortex(fd, &d->data);
+	fclose(fd);
+    }
+
+    if (d->Detect) {
+	errors++;
+	if (searchVortex(d->System, &VtSystem) != ERROR)
+	    sprintf(lbyte(msgBuf.mbtext), (errors == 1) ? "%s" : ", %s",
+						VtSystem.Name);
+    }
+    free(d);
+}
+
+/*
+ * VortexList
+ *
+ * This is a list of systems found during a session of adding messages.  The
+ * list is used for performance reasons.  When a session is over this list
+ * is used to update our records on disk all at once..
+ */
+SListBase VortexList = { NULL, CheckVt, NULL, FreeVt, NULL };
 
 /*
  * NotVortex()
@@ -413,7 +494,6 @@ char NotVortex()
     }
 }
 
-static int errors;
 /*
  * FinVortexing()
  *
@@ -435,61 +515,6 @@ void FinVortexing()
 	strCat(msgBuf.mbtext, ".");
 	netResult(msgBuf.mbtext);
     }
-}
-
-/*
- * FreeVt()
- *
- * This will write and free an element of the vortex list; obviously, it is
- * used in list handling.
- */
-static void FreeVt(Vortex *d)
-{
-    label    temp;
-    SYS_FILE vortex;
-    FILE     *fd;
-    VtRecord VtSystem;
-
-    if (d->Current > d->data.vHighest)
-	d->data.vHighest = d->Current;
-
-    if (d->DateCurrent > d->data.vLastDate)
-	d->data.vLastDate = d->DateCurrent;
-
-    sprintf(temp, "%d.vex", d->SystemNum);
-    makeSysName(vortex, temp, &cfg.netArea);
-    if ((fd = fopen(vortex, R_W_ANY)) == NULL) {
-	if ((fd = fopen(vortex, WRITE_ANY)) == NULL) {
-	    splitF(netLog, "Couldn't create %s!!\n", vortex);
-	}
-    }
-    else {
-	fseek(fd, d->Slot * sizeof d->data, 0);
-    }
-
-    if (fd != NULL) {
-	putVortex(fd, &d->data);
-	fclose(fd);
-    }
-
-    if (d->Detect) {
-	errors++;
-	if (searchVortex(d->System, &VtSystem) != ERROR)
-	    sprintf(lbyte(msgBuf.mbtext), (errors == 1) ? "%s" : ", %s",
-						VtSystem.Name);
-    }
-    free(d);
-}
-
-/*
- * CheckVt()
- *
- * This function is used to search the list of vortex records for a given
- * system.
- */
-void *CheckVt(Vortex *d, char *s)
-{
-    return (strCmpU(d->System, s) == SAMESTRING) ? d : NULL;
 }
 
 /*
@@ -522,36 +547,4 @@ long ReadTime(char *time)
 
     ret += atol(s + 1);
     return 60 * ret;
-}
-
-/*
- * searchVortex()
- *
- * This function will search the vortex list for the given system.  It
- * return ERROR if the system is not in the database, otherwise an index
- * into it in terms of records.
- */
-static int searchVortex(char *id, VtRecord *VtSystem)
-{
-    int      rover;
-    UNS_16   hval;
-    FILE     *fd = NULL;
-    SYS_FILE name;
-
-    makeSysName(name, "vortex.sys", &cfg.netArea);
-    if ((fd = fopen(name, READ_ANY)) == NULL) return ERROR;
-    hval = hash(id);
-    for (rover = 0; rover < TopVx; rover++) {
-	if (VI[rover] == hval) {
-	    if (fd == NULL)
-		if ((fd = fopen(name, READ_ANY)) == NULL) return ERROR;
-	    fseek(fd, rover * sizeof *VtSystem, 0);
-	    if (fread(VtSystem, sizeof *VtSystem, 1, fd) > 0) {
-		if (strCmpU(id, VtSystem->Id) == SAMESTRING) break;
-	    }
-	}
-    }
-    if (fd != NULL)
-    	fclose(fd);
-    return (rover == TopVx) ? ERROR : rover;
 }
