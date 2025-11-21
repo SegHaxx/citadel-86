@@ -812,7 +812,7 @@ AN_UNSIGNED modIn()
 		    HangUp(TRUE);
 		return(0);
 	    } else {
-		pause(200);		/* confirm it's not a glitch */
+		//pause(200);		/* confirm it's not a glitch */
 		if (!gotCarrier()) {    /* check again */
 		    printf("Carr-loss\n");
 		    logMessage(CARRLOSS, 0l, logFlags);
