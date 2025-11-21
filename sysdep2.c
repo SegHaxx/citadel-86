@@ -64,6 +64,7 @@
 #define SETDISK		14
 
 static char Refresh = 0;
+static char UnderDPMI;
 static char UnderDesqView;
 
 extern char *R_W_ANY;
@@ -662,6 +663,19 @@ fprintf(fd,
     }
 }
 
+static int IsDPMI(void){
+   union REGS r;
+	r.x.ax=0x1687;
+	int86(0x2F,&r,&r);
+	return r.x.ax?FALSE:TRUE;
+}
+
+static void __dpmi_yield(void){
+   union REGS r;
+	r.x.ax=0x1680;
+	int86(0x2F,&r,&r);
+}
+
 /*
  * systemInit()
  *
@@ -737,8 +751,10 @@ int systemInit()
     ctrlbrk(Control_C);
 #endif
 
-    if ((UnderDesqView = IsDesqView()))
-	printf("DesqView detected.\n");
+	 if((UnderDPMI=IsDPMI()))
+		 printf("DPMI detected.\n");
+	 if((UnderDesqView=IsDesqView()))
+		 printf("DesqView detected.\n");
 
     InitProtocols();
 
@@ -912,21 +928,22 @@ int WhatDay()
     return _AL;
 }
 
+static void Yield(void){
+	if(UnderDPMI){__dpmi_yield();return;}
+	if(UnderDesqView){DVApiCall(0x1000);return;}
+	asm hlt;
+}
+
 /*
  * BeNice()
  *
  * This is used to be nice to the nice operating system.
  */
-void BeNice(int x)
-{
-    if (UnderDesqView) {
-	DVApiCall(0x1000);
-	if (x == IDLE_PAUSE) {
-	    DVApiCall(0x1000);
-	    DVApiCall(0x1000);
-	    DVApiCall(0x1000);
-	}
-    }
+void BeNice(int x){
+	Yield();
+	if(x!=IDLE_PAUSE) return;
+	Yield();
+	Yield();
 }
 
 /*
