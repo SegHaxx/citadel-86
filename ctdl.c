@@ -12,6 +12,8 @@
 
 #include "ctdl.h"
 
+#include <ctype.h>
+
 /*
 #define NEED_MSG_PEEKING 
 #define NEED_MSG_SHOWING 
@@ -755,6 +757,56 @@ char ManualMsgPage;
 #define ABORT_BF	0x400
 
 /*
+ * UserOptAdd()
+ *
+ * This adds the given name to a list.
+ */
+static int UserOptAdd(char *str, int arg)
+{
+    AddData(&Opt.Users, strdup(str), NULL, FALSE);
+    return TRUE;
+}
+
+/*
+ * FindUser()
+ *
+ * Is the current user @system _ domain going to match?
+ *
+ * 7/26/94 - Also make this work against the CC list.
+ */
+static void *FindUser(char *element, int x)
+/* x is actually not used -- we use global msgBuf */
+{
+	char Full[NAMESIZE + MB_AUTH + 2];
+	void *FindUserWork();
+
+	if (strlen(msgBuf.mboname) != 0) {
+		sprintf(Full, "%s@%s", msgBuf.mbauth, msgBuf.mboname);
+		if (strlen(msgBuf.mbdomain) != 0)
+			sprintf(lbyte(Full), "_%s", msgBuf.mbdomain);
+	}
+	else
+		strcpy(Full, msgBuf.mbauth);
+
+	if (FindUserWork(Full, element) != NULL)
+		return element;
+
+	if (strlen(msgBuf.mbaddr) != 0) {
+		sprintf(Full, "%s@%s", msgBuf.mbto, msgBuf.mbaddr);
+	}
+	else
+		strcpy(Full, msgBuf.mbto);
+
+	if (FindUserWork(Full, element) != NULL)
+		return element;
+
+	if (AltSearchList(&msgBuf.mbCC, FindUserWork, element) != NULL)
+		return element;
+
+	return NULL;
+}
+
+/*
  * doRead()
  *
  * This function handles the R(ead) command.
@@ -793,8 +845,6 @@ char doRead(char moreYet, char first)
 		TERM "B\bFile(s)\n", TERM "\nDirectory(s)", ""
 	};
 	char  cmdbuf[40];
-	void *FindUser();
-	int   UserOptAdd(char *str, int arg);
 
 	whichMess = NEWoNLY; 
 	if (moreYet)   first = '\0';
@@ -1146,56 +1196,6 @@ commondate:
     Opt.MaxMessagesToShow = -1;
     ManualMsgPage = FALSE;
     return GOOD_SELECT;
-}
-
-/*
- * UserOptAdd()
- *
- * This adds the given name to a list.
- */
-static int UserOptAdd(char *str, int arg)
-{
-    AddData(&Opt.Users, strdup(str), NULL, FALSE);
-    return TRUE;
-}
-
-/*
- * FindUser()
- *
- * Is the current user @system _ domain going to match?
- *
- * 7/26/94 - Also make this work against the CC list.
- */
-static void *FindUser(char *element, int x)
-/* x is actually not used -- we use global msgBuf */
-{
-	char Full[NAMESIZE + MB_AUTH + 2];
-	void *FindUserWork();
-
-	if (strlen(msgBuf.mboname) != 0) {
-		sprintf(Full, "%s@%s", msgBuf.mbauth, msgBuf.mboname);
-		if (strlen(msgBuf.mbdomain) != 0)
-			sprintf(lbyte(Full), "_%s", msgBuf.mbdomain);
-	}
-	else
-		strcpy(Full, msgBuf.mbauth);
-
-	if (FindUserWork(Full, element) != NULL)
-		return element;
-
-	if (strlen(msgBuf.mbaddr) != 0) {
-		sprintf(Full, "%s@%s", msgBuf.mbto, msgBuf.mbaddr);
-	}
-	else
-		strcpy(Full, msgBuf.mbto);
-
-	if (FindUserWork(Full, element) != NULL)
-		return element;
-
-	if (AltSearchList(&msgBuf.mbCC, FindUserWork, element) != NULL)
-		return element;
-
-	return NULL;
 }
 
 /* 

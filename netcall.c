@@ -106,6 +106,71 @@ char caller()
 }
 
 /*
+ * SendRoom()
+ *
+ * Sends a room to the receiving system during netting.  It returns ERROR if
+ * carrier etc is lost.
+ */
+static int SendRoom(SharedRoomData *room, int system, int roomslot, void *d){
+	char cmd;
+	char doit, *s1, *s2, *s3, *name;
+	SystemCallRecord *called;
+	int *slot;
+
+	called = d;
+	if (!gotCarrier()) {
+		modStat = haveCarrier = FALSE;
+		return ERROR;
+	}
+
+	if (SearchList(&called->SentRooms, &roomslot) != NULL) {
+		return TRUE;	/* already sent, perhaps in another connect */
+	}
+
+	Addressing(system, room->room, &cmd, &s1, &s2, &s3, &name, &doit);
+	if (doit && !(room->room->sr_flags & SR_SENT) &&
+		(roomTab[roomslot].rtlastNetAll >
+			room->room->lastMess ||
+		(roomTab[roomslot].rtlastNetBB >
+			room->room->lastMess &&
+		GetMode(room->room->mode) == BACKBONE) ||
+		GetFA(room->room->mode) ||
+		(GetMode(room->room->mode) != PEON && !netBuf.nbflags.local))
+	) {
+		ITL_optimize(TRUE);
+		if (findAndSend((RecMassTransfer ||
+			(room->room->sr_flags & SR_RECEIVED)) ?
+			NET_ROOM : cmd, room,
+			RoomSend, roomTab[roomslot].rtname, RoomReceive)) {
+			/* if successful, record event */
+			slot = GetDynamic(sizeof *slot);
+			(*slot) = roomslot;
+			AddData(&called->SentRooms, slot, NULL, FALSE);
+		}
+	}
+
+	return TRUE;
+}
+
+/*
+ * sendSharedRooms()
+ *
+ * This sends all shared rooms to receiver.
+ */
+static void sendSharedRooms(){
+	SystemCallRecord *called;
+
+	if ((called = SearchList(&SystemsCalled, &thisNet)) == NULL) {
+		splitF(netLog, "Internal bug - can't find %d in SystemsCalled?!\n", thisNet);
+		return;
+	}
+
+	SendFastTransfer();
+
+	EachSharedRoom(thisNet, SendRoom, SendVirtualRoom, called);
+}
+
+/*
  * sendStuff()
  *
  * This function handles being the sender of information (sending role).
@@ -450,26 +515,6 @@ void readNegMail(char talk)
 }
 
 /*
- * sendSharedRooms()
- *
- * This sends all shared rooms to receiver.
- */
-static void sendSharedRooms()
-{
-	int SendRoom(SharedRoomData *room, int system, int roomslot, void *d);
-	SystemCallRecord *called;
-
-	if ((called = SearchList(&SystemsCalled, &thisNet)) == NULL) {
-		splitF(netLog, "Internal bug - can't find %d in SystemsCalled?!\n", thisNet);
-		return;
-	}
-
-	SendFastTransfer();
-
-	EachSharedRoom(thisNet, SendRoom, SendVirtualRoom, called);
-}
-
-/*
  * Addressing()
  *
  * This function is responsible for deciding what sort of addressing or routing
@@ -510,54 +555,6 @@ void Addressing(int system, SharedRoom *room, char *commnd, char **send1,
 	break;
     default: crashout("shared rooms: #2");
     }
-}
-
-/*
- * SendRoom()
- *
- * Sends a room to the receiving system during netting.  It returns ERROR if
- * carrier etc is lost.
- */
-static int SendRoom(SharedRoomData *room, int system, int roomslot, void *d)
-{
-	char cmd;
-	char doit, *s1, *s2, *s3, *name;
-	SystemCallRecord *called;
-	int *slot;
-
-	called = d;
-	if (!gotCarrier()) {
-		modStat = haveCarrier = FALSE;
-		return ERROR;
-	}
-
-	if (SearchList(&called->SentRooms, &roomslot) != NULL) {
-		return TRUE;	/* already sent, perhaps in another connect */
-	}
-
-	Addressing(system, room->room, &cmd, &s1, &s2, &s3, &name, &doit);
-	if (doit && !(room->room->sr_flags & SR_SENT) &&
-		(roomTab[roomslot].rtlastNetAll >
-			room->room->lastMess ||
-		(roomTab[roomslot].rtlastNetBB >
-			room->room->lastMess &&
-		GetMode(room->room->mode) == BACKBONE) ||
-		GetFA(room->room->mode) ||
-		(GetMode(room->room->mode) != PEON && !netBuf.nbflags.local))
-	) {
-		ITL_optimize(TRUE);
-		if (findAndSend((RecMassTransfer ||
-			(room->room->sr_flags & SR_RECEIVED)) ?
-			NET_ROOM : cmd, room,
-			RoomSend, roomTab[roomslot].rtname, RoomReceive)) {
-			/* if successful, record event */
-			slot = GetDynamic(sizeof *slot);
-			(*slot) = roomslot;
-			AddData(&called->SentRooms, slot, NULL, FALSE);
-		}
-	}
-
-	return TRUE;
 }
 
 /*
@@ -779,14 +776,19 @@ void doSendFiles()
 
 }
 
+static void SendFileResults(char *name, char *node){
+	if (haveCarrier) {
+		sprintf(msgBuf.mbtext, "Send File: %s sent to %s.", name, node);
+		netResult(msgBuf.mbtext);
+	}
+}
+
 /*
  * netSendFile()
  *
  * This function will send a file to another system via net.
  */
-void netSendFile(DirEntry *fn)
-{
-	void SendFileResults(char *name, char *node);
+void netSendFile(DirEntry *fn){
 	PROTOCOL		*External;
 	struct cmd_data	cmds;
 	char		mess[140];
@@ -826,24 +828,24 @@ void netSendFile(DirEntry *fn)
 	}
 }
 
-static void SendFileResults(char *name, char *node)
-{
-	if (haveCarrier) {
-		sprintf(msgBuf.mbtext, "Send File: %s sent to %s.", name, node);
-		netResult(msgBuf.mbtext);
-	}
+extern FILE *upfd;
+/*
+ * fl_req_free()
+ *
+ * This will write and free a file request.
+ */
+static void fl_req_free(struct fl_req *d){
+    if (upfd != NULL) fwrite(d, sizeof *d, 1, upfd);
+    free(d);
 }
 
-extern FILE *upfd;
 /*
  * askFiles()
  *
  * This function will ask for file(s) from caller.
  */
-void askFiles()
-{
+void askFiles(){
     label    data2;
-    void fl_req_free();
     SYS_FILE dataFl;
     char     mess[130];
     char     ambiguous;
@@ -927,17 +929,6 @@ splitF(netLog, "sNC success ambiguous is %d\n", ambiguous);
 	    fclose(upfd);
 	}
     }
-}
-
-/*
- * fl_req_free()
- *
- * This will write and free a file request.
- */
-static void fl_req_free(struct fl_req *d)
-{
-    if (upfd != NULL) fwrite(d, sizeof *d, 1, upfd);
-    free(d);
 }
 
 /*

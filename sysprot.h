@@ -36,7 +36,7 @@ char realSetSpace(char disk, char *dir);
 void MSDOSparse(char *theDir, char *drive);
 void doSendWork(char *filename, void (*fn)(DirEntry *fn));
 int getModemId(void);
-char ShowDoors(FILE *fd);
+//char ShowDoors(FILE *fd);
 void initDirList(void);
 int nodie(void);
 int Control_C(void);
@@ -44,9 +44,9 @@ void SysWork(void (*form)(), char *cmdLine);
 int specCmpU(char *f1, char *f2);
 void setup_nocccb(void);
 void VideoInit(void);
-int fileType(char *drive, char dir);
-int goodArea(MenuId id, char *prompt, char *dir, char *drive);
-void AddName(DirEntry *fn);
+//int fileType(char *drive, char dir);
+//int goodArea(MenuId id, char *prompt, char *dir, char *drive);
+//void AddName(DirEntry *fn);
 
         /* IBM support function prototypes */
 void setInterrupts(void);
@@ -75,7 +75,7 @@ void mClose(void);
 
         /* Miscellaneous prototypes */
 void diskSpaceLeft(char drive, long *sectors, long *bytes);
-int  check_CR(void);
+//int  check_CR(void);
 
 
 #ifdef TIMER_FUNCTIONS_NEEDED

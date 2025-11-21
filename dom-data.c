@@ -33,8 +33,9 @@ extern MessageBuffer   msgBuf;
 /*
  * Current domain mail in #DOMAINAREA -- map of directories to domain names.
  */
-void *CheckDomain(), *EatDomainLine(char *line);
-int CmpDomain();
+static void* CheckDomain();
+static void* EatDomainLine(char *line);
+static int CmpDomain();
 
 SListBase DomainMap    = { NULL, CheckDomain, CmpDomain, free, EatDomainLine };
 
@@ -137,7 +138,7 @@ static int CmpDomain(DomainDir *s, DomainDir *t)
  * Some useful static functions.
  */
 void DomainLog(char *str);
-void *EatCosts(char *line);
+static void *EatCosts(char *line);
 int SetUpCallOut(char *DName);
 int CallOutWork(char *DName);
 
@@ -146,7 +147,7 @@ int lifo();
 /*
  * List of domain handlers -- source: CTDLDMHD.SYS, CTDLDMHD.LCL.
  */
-void *FindDomainH(), *EatDomainH();
+static void *FindDomainH(), *EatDomainH();
 SListBase DomainHandlers = { NULL, FindDomainH, lifo, free, EatDomainH };
 
 SListBase Costs = { NULL, ChkStrtoN, NULL, NULL, EatCosts };
@@ -177,6 +178,62 @@ static void *FindDomainH(DomainHandler *data, char *name)
 }
 
 /*
+ * ViaHandle()
+ *
+ * This handles a line of format "domain via domain" for EatDomainH().  It
+ * always returns NULL since it's only setting up the link, not creating a
+ * new record.
+ */
+static void *ViaHandle(char *line)
+{
+
+	/* we're guaranteed of no comments on line */
+    char *space, *via;
+    DomainHandler *target, *viadomain;
+
+    if ((space = strchr(line, ' ')) == NULL) {
+	printf("WARNING: badly formed ctdldmhd.sys (3:-%s-).\n", line);
+	return NULL;
+    }
+
+    *space++ = 0;
+    if (strncmp("via ", space, 4) != 0) {
+	if (strncmp("is ", space, 3) != 0) {
+	    printf("WARNING: badly formed ctdldmhd.sys (4:-%s-).\n", space);
+	    return NULL;
+	}
+	/* handle "<domain> is <domain>" (aliasing domains) */
+	else {
+	    via = strchr(space, ' ') + 1;
+	    if ((viadomain = SearchList(&DomainHandlers, via)) != NULL) {
+		target = GetDynamic(sizeof *target);
+		target->flags  = ALIAS_RECORD;
+		target->domain = strdup(line);
+		target->via = viadomain;
+		return target;
+	    }
+	    else printf("Didn't find domain %s\n", via);
+	    return NULL;
+	}
+    }
+
+    /* no failure guaranteed ... */
+    via = strchr(space, ' ') + 1;
+
+    if ((target = SearchList(&DomainHandlers, line)) != NULL) {
+	if ((viadomain = SearchList(&DomainHandlers, via)) != NULL) {
+	    target->via = viadomain;
+	}
+    }
+
+	/*
+	 * since we aren't building a new record but instead are creating a link
+	 * between two records, we always return NULL.
+	 */
+    return NULL;
+}
+
+/*
  * EatDomainH()
  *
  * This eats a line from ctdldmhd.sys.  Notice the support for the 'via'
@@ -184,7 +241,6 @@ static void *FindDomainH(DomainHandler *data, char *name)
  */
 static void *EatDomainH(char *line)
 {
-    void *ViaHandle(char *line);
     DomainHandler *data;
     char *c;
     label temp;
@@ -248,12 +304,12 @@ static void *EatCosts(char *line)
  * Universal function for causing Last In First Out lists to occur in the
  * SList stuff.
  */
-lifo()
+int lifo()
 {
 	return 1;
 }
 
-void *OnTarget(), *EatRoute(char *line);
+static void *OnTarget(), *EatRoute(char *line);
 SListBase Routes = { NULL, OnTarget, NULL, NULL, EatRoute };
 
 /*
@@ -297,61 +353,4 @@ static void *EatRoute(char *line)
     record->Target = targind;
     record->Via = viaind;
     return record;		/* checked is automatically initialized */
-}
-
-
-/*
- * ViaHandle()
- *
- * This handles a line of format "domain via domain" for EatDomainH().  It
- * always returns NULL since it's only setting up the link, not creating a
- * new record.
- */
-static void *ViaHandle(char *line)
-{
-
-	/* we're guaranteed of no comments on line */
-    char *space, *via;
-    DomainHandler *target, *viadomain;
-
-    if ((space = strchr(line, ' ')) == NULL) {
-	printf("WARNING: badly formed ctdldmhd.sys (3:-%s-).\n", line);
-	return NULL;
-    }
-
-    *space++ = 0;
-    if (strncmp("via ", space, 4) != 0) {
-	if (strncmp("is ", space, 3) != 0) {
-	    printf("WARNING: badly formed ctdldmhd.sys (4:-%s-).\n", space);
-	    return NULL;
-	}
-	/* handle "<domain> is <domain>" (aliasing domains) */
-	else {
-	    via = strchr(space, ' ') + 1;
-	    if ((viadomain = SearchList(&DomainHandlers, via)) != NULL) {
-		target = GetDynamic(sizeof *target);
-		target->flags  = ALIAS_RECORD;
-		target->domain = strdup(line);
-		target->via = viadomain;
-		return target;
-	    }
-	    else printf("Didn't find domain %s\n", via);
-	    return NULL;
-	}
-    }
-
-    /* no failure guaranteed ... */
-    via = strchr(space, ' ') + 1;
-
-    if ((target = SearchList(&DomainHandlers, line)) != NULL) {
-	if ((viadomain = SearchList(&DomainHandlers, via)) != NULL) {
-	    target->via = viadomain;
-	}
-    }
-
-	/*
-	 * since we aren't building a new record but instead are creating a link
-	 * between two records, we always return NULL.
-	 */
-    return NULL;
 }

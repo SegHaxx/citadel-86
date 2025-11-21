@@ -14,7 +14,7 @@
 
 #include "ctdl.h"
 #include "compress.h"
-#include <alloc.h>
+//#include <alloc.h>
 
 /*
  *				Contents
@@ -144,6 +144,53 @@ void ShowVerbose(DirEntry *file)
 }
 
 /*
+ * wild2Card()
+ *
+ * integrate this back into wildCard() someday.
+ */
+static int wild2Card(SListBase *Files, void (*fn)(), int flags)
+{
+	int Count;
+	DirEntry entry;
+
+	outFlag     = OUTOK;
+	if (!(flags & WC_NO_COMMENTS)) {
+#ifdef COMMENT_HEADER
+		if (access(COMMENT_HEADER, 0) == 0) {
+			entry.unambig = COMMENT_HEADER;
+			doFormatted(&entry);
+			doCR();
+		}
+#endif
+		StFileComSearch();
+	}
+	Count = RunList(Files, fn);
+	if (!(flags & WC_NO_COMMENTS)) EndFileComment();
+	return Count;
+}
+
+/*
+ * DirCmp()
+ *
+ * This is used by Slist to sort directory entries.
+ */
+static int DirCmp(DirEntry *s1, DirEntry *s2)
+{
+    return strCmpU(s1->unambig, s2->unambig);
+}
+
+/*
+ * DirFree()
+ *
+ * This function frees a directory entry.
+ */
+static void DirFree(DirEntry *d)
+{
+    free(d->unambig);
+    free(d);
+}
+
+/*
  * wildCard()
  *
  * This function allows generic access to a directory room. The actual actions
@@ -192,32 +239,6 @@ int wildCard(void (*fn)(DirEntry *str), char *filename, char *phrase, int flags)
 }
 
 /*
- * wild2Card()
- *
- * integrate this back into wildCard() someday.
- */
-static int wild2Card(SListBase *Files, void (*fn)(), int flags)
-{
-	int Count;
-	DirEntry entry;
-
-	outFlag     = OUTOK;
-	if (!(flags & WC_NO_COMMENTS)) {
-#ifdef COMMENT_HEADER
-		if (access(COMMENT_HEADER, 0) == 0) {
-			entry.unambig = COMMENT_HEADER;
-			doFormatted(&entry);
-			doCR();
-		}
-#endif
-		StFileComSearch();
-	}
-	Count = RunList(Files, fn);
-	if (!(flags & WC_NO_COMMENTS)) EndFileComment();
-	return Count;
-}
-
-/*
  * FindDirName()
  *
  * This finds the directory associated with some room.
@@ -252,25 +273,3 @@ void *DirCheck(DirEntry *s1, DirEntry *s2)
 {
     return (strCmpU(s1->unambig, s2->unambig) == 0) ? s2 : NULL;
 }
-
-/*
- * DirCmp()
- *
- * This is used by Slist to sort directory entries.
- */
-static int DirCmp(DirEntry *s1, DirEntry *s2)
-{
-    return strCmpU(s1->unambig, s2->unambig);
-}
-
-/*
- * DirFree()
- *
- * This function frees a directory entry.
- */
-static void DirFree(DirEntry *d)
-{
-    free(d->unambig);
-    free(d);
-}
-

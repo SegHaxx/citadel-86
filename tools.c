@@ -205,8 +205,8 @@ void CallMsg(char *fn, char *str)
  *
  * This function interprets the string and returns it in seconds.
  */
-int ReadDate(char *date, long *RetTime)
-{
+int ReadDate(char *date, long *RetTime){
+#ifdef __TURBOC__
     static char *MonthTab[] = {
 	"JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
 	"JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"
@@ -252,6 +252,7 @@ int ReadDate(char *date, long *RetTime)
     if ((dptr.da_day = atoi(date)) == 0) return ERROR;
     zero_struct(tptr);
     *RetTime = dostounix(&dptr, &tptr);
+#endif
     return TRUE;
 }
 
@@ -260,8 +261,8 @@ int ReadDate(char *date, long *RetTime)
  *
  * This gives the current time in absolute terms.
  */
-long CurAbsolute()
-{
+long CurAbsolute(){
+#ifdef __TURBOC__
     struct date dateblk;
     struct time timeblk;
 
@@ -269,6 +270,7 @@ long CurAbsolute()
     gettime(&timeblk);
 
     return dostounix(&dateblk, &timeblk);
+#endif
 }
 
 /*

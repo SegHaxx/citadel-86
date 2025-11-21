@@ -802,6 +802,94 @@ void ShoveCR()
 }
 
 /*
+ * RestorePointers()
+ *
+ * This function restores msg pointers.
+ */
+static void RestorePointers(MSG_NUMBER	*msgptrs)
+{
+	int i;
+
+	if (msgptrs != NULL) {
+		for (i = 0; i < MAXROOMS;  i++)
+			logBuf.lastvisit[i] = msgptrs[i];
+		free(msgptrs);
+	}
+}
+
+/*
+ * PrepareForMessageDisplay()
+ *
+ * This function is called in preparation for reading a room for a user.
+ * This consists currently of setting the StartSlot variable of Opt
+ * given what room we're in.
+ */
+static void PrepareForMessageDisplay(char revOrder)
+{
+	int              rover, GoodMessages;
+	MSG_NUMBER       msgNo;
+	int              start, finish, increment;
+	extern OptValues Opt;
+
+	if (Opt.MaxMessagesToShow <= 0)
+		return;
+
+	/*
+	 * OK, find the point in the room slots where we want to start,
+	 * or stop, depending on how we are doing this, showing messages.
+	 */
+	SetShowLimits(!revOrder, &start, &finish, &increment);
+
+	for (rover = start, Opt.StartSlot = 0, GoodMessages = 0;
+	     rover != finish && GoodMessages < Opt.MaxMessagesToShow;
+	     rover += increment)
+	{
+		msgNo = (roomBuf.msg[rover].rbmsgNo & S_MSG_MASK);
+	        if (msgNo > cfg.oldest)
+		{
+			Opt.StartSlot = rover;
+			GoodMessages++;
+		}
+	}
+}
+
+int StartingRoom, CurRoom;
+/*
+ * doGlobal()
+ *
+ * Does .R{Y,W,X,other protocols}G
+ */
+static void doGlobal(int flags, ValidateShowMsg_f_t * func)
+{
+	extern char PhraseUser;
+	int gflags;
+
+	if (outPut == NORMAL) flags |= PAGEABLE | MSG_LEAVE_PAGEABLE;
+
+	StartingRoom = CurRoom = thisRoom;
+	gflags = MOVE_GOTO | ((flags & TALK) ? MOVE_TALK : 0);
+
+	while (
+		((READMSG_TYPE(flags) == NEWoNLY &&
+			!PhraseUser) ? gotoRoom("", gflags) : NextSeq())
+				&& (gotCarrier() || onConsole)) {
+		if ((flags & TALK) && outPut == DISK) {
+			outPut = NORMAL;
+			mPrintf("Working on %s\n ", roomBuf.rbname);
+			outPut = DISK;
+		}
+		if (flags & TALK) givePrompt();
+		if (flags & TALK) mPrintf("read\n ");
+		PrepareForMessageDisplay(flags & REV);
+		showMessages(flags & ~(TALK|NO_TALK),
+					logBuf.lastvisit[thisRoom], func);
+		if (flags & TALK) doCR();	/* aesthetics, pig-dogs. */
+		if (outFlag == OUTSKIP) break;
+	}
+	PagingOff();
+}
+
+/*
  * download()
  *
  * This is the is the menu-level send-message-via-protocol function.
@@ -957,21 +1045,6 @@ void download(int msgflags, char protocol, char global, int Compression,
 }
 
 /*
- * RestorePointers()
- *
- * This function restores msg pointers.
- */
-static void RestorePointers(MSG_NUMBER	*msgptrs)
-{
-	int i;
-
-	if (msgptrs != NULL) {
-		for (i = 0; i < MAXROOMS;  i++)
-			logBuf.lastvisit[i] = msgptrs[i];
-		free(msgptrs);
-	}
-}
-/*
  * RmTempFiles()
  *
  * This function deletes all files in the specified directory, and then
@@ -984,78 +1057,6 @@ void RmTempFiles(char *dir)
 		homeSpace();
 	}
 	KillTempArea();
-}
-
-int StartingRoom, CurRoom;
-/*
- * doGlobal()
- *
- * Does .R{Y,W,X,other protocols}G
- */
-static void doGlobal(int flags, ValidateShowMsg_f_t * func)
-{
-	extern char PhraseUser;
-	int gflags;
-
-	if (outPut == NORMAL) flags |= PAGEABLE | MSG_LEAVE_PAGEABLE;
-
-	StartingRoom = CurRoom = thisRoom;
-	gflags = MOVE_GOTO | ((flags & TALK) ? MOVE_TALK : 0);
-
-	while (
-		((READMSG_TYPE(flags) == NEWoNLY &&
-			!PhraseUser) ? gotoRoom("", gflags) : NextSeq())
-				&& (gotCarrier() || onConsole)) {
-		if ((flags & TALK) && outPut == DISK) {
-			outPut = NORMAL;
-			mPrintf("Working on %s\n ", roomBuf.rbname);
-			outPut = DISK;
-		}
-		if (flags & TALK) givePrompt();
-		if (flags & TALK) mPrintf("read\n ");
-		PrepareForMessageDisplay(flags & REV);
-		showMessages(flags & ~(TALK|NO_TALK),
-					logBuf.lastvisit[thisRoom], func);
-		if (flags & TALK) doCR();	/* aesthetics, pig-dogs. */
-		if (outFlag == OUTSKIP) break;
-	}
-	PagingOff();
-}
-
-/*
- * PrepareForMessageDisplay()
- *
- * This function is called in preparation for reading a room for a user.
- * This consists currently of setting the StartSlot variable of Opt
- * given what room we're in.
- */
-static void PrepareForMessageDisplay(char revOrder)
-{
-	int              rover, GoodMessages;
-	MSG_NUMBER       msgNo;
-	int              start, finish, increment;
-	extern OptValues Opt;
-
-	if (Opt.MaxMessagesToShow <= 0)
-		return;
-
-	/*
-	 * OK, find the point in the room slots where we want to start,
-	 * or stop, depending on how we are doing this, showing messages.
-	 */
-	SetShowLimits(!revOrder, &start, &finish, &increment);
-
-	for (rover = start, Opt.StartSlot = 0, GoodMessages = 0;
-	     rover != finish && GoodMessages < Opt.MaxMessagesToShow;
-	     rover += increment)
-	{
-		msgNo = (roomBuf.msg[rover].rbmsgNo & S_MSG_MASK);
-	        if (msgNo > cfg.oldest)
-		{
-			Opt.StartSlot = rover;
-			GoodMessages++;
-		}
-	}
 }
 
 /*
@@ -1429,7 +1430,7 @@ void SaveInterrupted(MessageBuffer *SomeMsg)
 		fwrite(SomeMsg, STATIC_MSG_SIZE, 1, upfd);
 		crypte(SomeMsg->mbtext, MAXTEXT, thisLog);
 		fwrite(SomeMsg->mbtext, MAXTEXT, 1, upfd);
-		RunListA(&SomeMsg->mbCC, DisplayCC, (void *) TEXTFILE);
+		RunListA(&SomeMsg->mbCC, (void(*)(void*,void*))DisplayCC, (void *) TEXTFILE);
 		fclose(upfd);
 	    }
 	}
@@ -1652,7 +1653,63 @@ void SendThatDamnFile(FILE *fbuf, int (*method)(int c))
     textDownload = FALSE;
 }
 
-void FreeFileEntry(), *EatDSZFormat(char *line);
+/*
+ * FreeFileEntry()
+ *
+ * This function frees an entry in the list of uploaded files.
+ */
+static void FreeFileEntry(UploadFile *entry)
+{
+	free(entry->name);
+	free(entry);
+}
+
+/*
+ * BuildReport()
+ *
+ * This function helps build a report of uploaded files.
+ */
+static void BuildReport(UploadFile *entry)
+{
+	sprintf(lbyte(msgBuf.mbtext), "%s (%ld) ", entry->name, entry->size);
+}
+
+/*
+ * EatDSZFormat()
+ *
+ * Eat a line from a DSZ log file
+ */
+static void *EatDSZFormat(char *line)
+{
+	extern int offline_mode;
+	char *arg, *tok;
+	int rover;
+	long size;
+	UploadFile *entry;
+
+	if ((tok = strtok(line, " \t")) == NULL) return NULL;
+
+	if (!isupper(*tok) || *tok == 'E' || *tok == 'L')
+		return NULL;
+
+	for (rover = 1; rover < 11; rover++) {
+		tok = strtok(NULL, " \t");
+		if (tok == NULL) return NULL;
+	}
+
+	if ((arg = strrchr(tok, '\\')) == NULL) 
+		arg = tok;
+	else
+		arg++;
+
+	size = FileCommentUpdate(arg, TRUE, !offline_mode);
+	entry = GetDynamic(sizeof *entry);
+	entry->name = strdup(arg);
+	entry->size = size;
+	/* sprintf(msgBuf.mbtext, "%s (%ld) ", arg, size); */
+	return entry;
+}
+
 SListBase FileList = { NULL, NULL, NULL, FreeFileEntry, EatDSZFormat };
 /*
  * upLoad()
@@ -1661,7 +1718,6 @@ SListBase FileList = { NULL, NULL, NULL, FreeFileEntry, EatDSZFormat };
  */
 void upLoad(int WC)
 {
-    void BuildReport();
     char fileName[MAX_FILENAME - 1];
     char successful;
     long size;
@@ -1745,7 +1801,7 @@ void upLoad(int WC)
 	else {
 	    MakeList(&FileList, UploadLog, NULL);
 	    strcpy(msgBuf.mbtext, "   ");
-	    RunList(&FileList, BuildReport);
+	    RunList(&FileList, (void(*)(void*))BuildReport);
 	    KillList(&FileList);
 	    unlink(UploadLog);
 	}
@@ -1755,63 +1811,6 @@ void upLoad(int WC)
 
     fileMessage(successful ? DoesNumerous(WC) ? FL_EX_END:FL_SUCCESS: FL_FAIL,
 						fileName, FALSE, WC, size);
-}
-
-/*
- * BuildReport()
- *
- * This function helps build a report of uploaded files.
- */
-static void BuildReport(UploadFile *entry)
-{
-	sprintf(lbyte(msgBuf.mbtext), "%s (%ld) ", entry->name, entry->size);
-}
-
-/*
- * FreeFileEntry()
- *
- * This function frees an entry in the list of uploaded files.
- */
-static void FreeFileEntry(UploadFile *entry)
-{
-	free(entry->name);
-	free(entry);
-}
-
-/*
- * EatDSZFormat()
- *
- * Eat a line from a DSZ log file
- */
-static void *EatDSZFormat(char *line)
-{
-	extern int offline_mode;
-	char *arg, *tok;
-	int rover;
-	long size;
-	UploadFile *entry;
-
-	if ((tok = strtok(line, " \t")) == NULL) return NULL;
-
-	if (!isupper(*tok) || *tok == 'E' || *tok == 'L')
-		return NULL;
-
-	for (rover = 1; rover < 11; rover++) {
-		tok = strtok(NULL, " \t");
-		if (tok == NULL) return NULL;
-	}
-
-	if ((arg = strrchr(tok, '\\')) == NULL) 
-		arg = tok;
-	else
-		arg++;
-
-	size = FileCommentUpdate(arg, TRUE, !offline_mode);
-	entry = GetDynamic(sizeof *entry);
-	entry->name = strdup(arg);
-	entry->size = size;
-	/* sprintf(msgBuf.mbtext, "%s (%ld) ", arg, size); */
-	return entry;
 }
 
 /*
@@ -1995,7 +1994,7 @@ int CmdMenuList(char *Opts[], SListBase *Selects, char *HelpFile, char *buf,
 	}
     } while ((c == '\b' || Opts[rover][0] != TERM[0]) && moreYet);
     MCount = 0;
-    RunListA(Selects, CopyBuf, (void *) buf);
+    RunListA(Selects, (void(*)(void*,void*))CopyBuf, (void *) buf);
     return GOOD_SELECT;
 }
 

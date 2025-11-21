@@ -1205,6 +1205,199 @@ void msgToDisk(char *filename, char all, MSG_NUMBER id, SECTOR_ID loc,
     free(fn);
 }
 
+/*
+ * AddNetMail()
+ *
+ * This should manage adding mail to a net system.
+ */
+static void AddNetMail(char *system, int flags)
+{
+    int cost, slot;
+    logBuffer *lBuf;
+    char isdomain = FALSE, *domain, *System;
+
+    /*
+     * sometimes system is mbaddr, which is not good, because later on down
+     * the line we call findMessage, which will result in (unfortunately)
+     * mbaddr being overwritten.  So we dup system.
+     */
+    System = strdup(system);
+    if (flags & CREDIT_SENDER) lBuf = &logBuf;
+    else		 lBuf = &logTmp;
+
+    if (strlen(System)) {
+	isdomain = (domain = strchr(System, '_')) != NULL;
+	if (!isdomain) {
+	    slot = searchNameNet(System, &netTemp);
+	    cost = !netTemp.nbflags.local;
+	}
+	else {
+	    *domain++ = 0;
+	    NormStr(domain);
+	    NormStr(System);
+	    cost = FindCost(domain);
+	}
+    }
+    else {
+	slot = thisNet;
+	cost = 0;
+	getNet(thisNet, &netTemp);	/* &L mail */
+	system = netTemp.netName;
+    }
+
+    if (cost > lBuf->credit && !(lBuf == &logBuf && HalfSysop())) {
+	free(System);
+	return ;
+    }
+
+    lBuf->credit -= cost;
+
+    if (SearchList(&SysList, system) == NULL) {
+	AddData(&SysList, strdup(system), NULL, FALSE);
+	netMailOut(isdomain, System, domain, TRUE, slot, flags);
+    }
+    free(System);
+
+    if (lBuf->credit < 0)
+	lBuf->credit = 0;
+}
+
+/*
+ * NetForwarding()
+ *
+ * This handles network forwarding.
+ */
+static void NetForwarding(logBuffer *lBuf)
+{
+    int cost;
+    ForwardMail *data;
+    label domain;
+    char *system;
+    extern SListBase MailForward;
+
+    /* Has forwarding address?  */
+    if ((data = SearchList(&MailForward, lBuf->lbname)) != NULL &&
+					lBuf->lbflags.NET_PRIVS) {
+	system = strdup(data->System);
+	if (ReqNodeName("", system, domain, RNN_ONCE | RNN_QUIET, &netTemp)) {
+	    if (domain[0] == 0)
+		cost = !netTemp.nbflags.local;
+	    else
+		cost = FindCost(domain);
+	    free(system);
+	    system = strdup(data->System);
+	    if (lBuf->credit >= cost) {
+		AddData(&msgBuf.mbInternal, strdup(lBuf->lbname), NULL, FALSE);
+		AddNetMail(system, 0);
+		KillList(&msgBuf.mbInternal);
+	    }
+	}
+	else {
+	    KillData(&MailForward, lBuf->lbname);
+	    UpdateForwarding();
+	}
+	free(system);
+    }
+}
+
+/*
+ * MailWork()
+ *
+ * This function is central to Mail delivery, and handles forwarding of both
+ * sorts.
+ */
+static void MailWork(int slot)
+{
+	logBuffer lBuf;
+	int auth_slot;
+
+	if (inNet != NON_NET) splitF(netLog, "Mail for %s.\n", logTmp.lbname);
+
+	if (inNet != NON_NET) {
+		if ((auth_slot = PersonExists(msgBuf.mbauth)) != ERROR) {
+			if (!AcceptableMail(auth_slot, slot)) {
+				splitF(netLog, "Mail rejected.\n");
+				return;
+			}
+		}
+	}
+
+	noteAMessage(logTmp.lbMail, MAILSLOTS, cfg.newest, cfg.catSector);
+
+	if (strCmpU(cfg.SysopName, logTmp.lbname) == SAMESTRING)
+		ArchiveMail = TRUE;
+
+	NetForwarding(&logTmp);
+
+	putLog(&logTmp, slot);
+
+	/* so we can't redeliver to this account */
+	AddData(&FwdVortex, strdup(logTmp.lbname), NULL, FALSE);
+
+	/* now check for forwarding to a local address */
+	initLogBuf(&lBuf);
+	LocalForwarding(thisLog, FindLocalForward(logTmp.lbname), &lBuf);
+	killLogBuf(&lBuf);
+}
+
+/*
+ * AddMail()
+ *
+ * This function should deliver mail to the named person.
+ */
+static void AddMail(char *DaPerson, int *fl)
+{
+    label person;
+    char  system[(NAMESIZE * 2) + 10];
+    int   slot, flags;
+    char *InternalError = "Internal error, couldn't identify '%s'\n ";
+
+    if (fl != NULL) flags = *fl;
+    else flags = 0;
+
+    switch (SepNameSystem(DaPerson, person, system, &netBuf)) {
+    case IS_SYSTEM:
+    case SYSTEM_IS_US:
+	if (!NetValidate(TRUE)) return;
+	AddNetMail(system, flags | CREDIT_SENDER);
+	break;
+    case BAD_FORMAT:
+	if (inNet == NON_NET) mPrintf(InternalError, DaPerson);
+	break;
+    case NO_SYSTEM:
+	if (inNet == NON_NET) mPrintf(InternalError, system);
+	break;
+    case NOT_SYSTEM:
+	if (strCmpU(DaPerson, "sysop") == SAMESTRING) {
+	    ArchiveMail = TRUE;
+	    if ((slot = findPerson(cfg.SysopName, &logTmp)) == ERROR) {
+		getRoom(AIDEROOM);
+		/* enter in Aide> room -- 'sysop' is special */
+		noteAMessage(roomBuf.msg, MSGSPERRM,
+						cfg.newest, cfg.catSector);
+
+		/* write it to disk:	    */
+		putRoom(AIDEROOM);
+		noteRoom();
+
+		getRoom(MAILROOM);
+	    }
+	    else
+		MailWork(slot);
+	}
+	else if ((slot = findPerson(DaPerson, &logTmp)) == ERROR) {
+	    if (inNet == NON_NET) {
+		mPrintf(InternalError, DaPerson);
+	    }
+	    else
+		splitF(netLog, "No recipient: %s\n", DaPerson);
+	}
+	else {
+	    MailWork(slot);
+	}
+    }
+}
+
 SListBase Errors = { NULL, NULL, NULL, free, NULL };
 /*
  * noteMessage()
@@ -1246,7 +1439,7 @@ static void noteMessage(logBuffer *lBuf, UNS_16 flags)
 
 	if (flags & FORWARD_MAIL) {
 	    newflags = FORCE_ROUTE_MAIL;
-	    RunListA(&TempForward, AddMail, &newflags);
+	    RunListA(&TempForward, (void(*)(void*,void*))AddMail, &newflags);
 	}
 
 	/*
@@ -1254,7 +1447,7 @@ static void noteMessage(logBuffer *lBuf, UNS_16 flags)
 	 * preference to the mbto and mbCC fields.
 	 */
 	if (HasOverrides(&msgBuf)) {
-	    RunListA(&msgBuf.mbOverride, AddMail, NULL);
+	    RunListA(&msgBuf.mbOverride, (void(*)(void*,void*))AddMail, NULL);
 	}
 	else if (!(flags & SKIP_RECIPIENT)) {
 	    if (msgBuf.mbaddr[0] ||
@@ -1306,7 +1499,7 @@ static void noteMessage(logBuffer *lBuf, UNS_16 flags)
 	}
 
 	    if (inNet == NON_NET) {
-		RunListA(&msgBuf.mbCC, AddMail, NULL);
+		RunListA(&msgBuf.mbCC, (void(*)(void*,void*))AddMail, NULL);
 	    }
 	}
 
@@ -1380,142 +1573,6 @@ void AssembleMessage(char *str)
 }
 
 /*
- * AddMail()
- *
- * This function should deliver mail to the named person.
- */
-static void AddMail(char *DaPerson, int *fl)
-{
-    label person;
-    char  system[(NAMESIZE * 2) + 10];
-    int   slot, flags;
-    char *InternalError = "Internal error, couldn't identify '%s'\n ";
-
-    if (fl != NULL) flags = *fl;
-    else flags = 0;
-
-    switch (SepNameSystem(DaPerson, person, system, &netBuf)) {
-    case IS_SYSTEM:
-    case SYSTEM_IS_US:
-	if (!NetValidate(TRUE)) return;
-	AddNetMail(system, flags | CREDIT_SENDER);
-	break;
-    case BAD_FORMAT:
-	if (inNet == NON_NET) mPrintf(InternalError, DaPerson);
-	break;
-    case NO_SYSTEM:
-	if (inNet == NON_NET) mPrintf(InternalError, system);
-	break;
-    case NOT_SYSTEM:
-	if (strCmpU(DaPerson, "sysop") == SAMESTRING) {
-	    ArchiveMail = TRUE;
-	    if ((slot = findPerson(cfg.SysopName, &logTmp)) == ERROR) {
-		getRoom(AIDEROOM);
-		/* enter in Aide> room -- 'sysop' is special */
-		noteAMessage(roomBuf.msg, MSGSPERRM,
-						cfg.newest, cfg.catSector);
-
-		/* write it to disk:	    */
-		putRoom(AIDEROOM);
-		noteRoom();
-
-		getRoom(MAILROOM);
-	    }
-	    else
-		MailWork(slot);
-	}
-	else if ((slot = findPerson(DaPerson, &logTmp)) == ERROR) {
-	    if (inNet == NON_NET) {
-		mPrintf(InternalError, DaPerson);
-	    }
-	    else
-		splitF(netLog, "No recipient: %s\n", DaPerson);
-	}
-	else {
-	    MailWork(slot);
-	}
-    }
-}
-
-/*
- * MailWork()
- *
- * This function is central to Mail delivery, and handles forwarding of both
- * sorts.
- */
-static void MailWork(int slot)
-{
-	logBuffer lBuf;
-	int auth_slot;
-
-	if (inNet != NON_NET) splitF(netLog, "Mail for %s.\n", logTmp.lbname);
-
-	if (inNet != NON_NET) {
-		if ((auth_slot = PersonExists(msgBuf.mbauth)) != ERROR) {
-			if (!AcceptableMail(auth_slot, slot)) {
-				splitF(netLog, "Mail rejected.\n");
-				return;
-			}
-		}
-	}
-
-	noteAMessage(logTmp.lbMail, MAILSLOTS, cfg.newest, cfg.catSector);
-
-	if (strCmpU(cfg.SysopName, logTmp.lbname) == SAMESTRING)
-		ArchiveMail = TRUE;
-
-	NetForwarding(&logTmp);
-
-	putLog(&logTmp, slot);
-
-	/* so we can't redeliver to this account */
-	AddData(&FwdVortex, strdup(logTmp.lbname), NULL, FALSE);
-
-	/* now check for forwarding to a local address */
-	initLogBuf(&lBuf);
-	LocalForwarding(thisLog, FindLocalForward(logTmp.lbname), &lBuf);
-	killLogBuf(&lBuf);
-}
-
-/*
- * NetForwarding()
- *
- * This handles network forwarding.
- */
-static void NetForwarding(logBuffer *lBuf)
-{
-    int cost;
-    ForwardMail *data;
-    label domain;
-    char *system;
-    extern SListBase MailForward;
-
-    /* Has forwarding address?  */
-    if ((data = SearchList(&MailForward, lBuf->lbname)) != NULL &&
-					lBuf->lbflags.NET_PRIVS) {
-	system = strdup(data->System);
-	if (ReqNodeName("", system, domain, RNN_ONCE | RNN_QUIET, &netTemp)) {
-	    if (domain[0] == 0)
-		cost = !netTemp.nbflags.local;
-	    else
-		cost = FindCost(domain);
-	    free(system);
-	    system = strdup(data->System);
-	    if (lBuf->credit >= cost) {
-		AddData(&msgBuf.mbInternal, strdup(lBuf->lbname), NULL, FALSE);
-		AddNetMail(system, 0);
-		KillList(&msgBuf.mbInternal);
-	    }
-	}
-	else {
-	    KillData(&MailForward, lBuf->lbname);
-	    UpdateForwarding();
-	}
-	free(system);
-    }
-}
-
-/*
  * LocalForwarding()
  *
  * This handles forwarding to a local account.  Since multiple forwarding
@@ -1549,63 +1606,6 @@ static void LocalForwarding(int from, char *name, logBuffer *workBuf)
 	AddData(&FwdVortex, strdup(name), NULL, FALSE);
 
 	LocalForwarding(slot, FindLocalForward(name), workBuf);
-}
-
-/*
- * AddNetMail()
- *
- * This should manage adding mail to a net system.
- */
-static void AddNetMail(char *system, int flags)
-{
-    int cost, slot;
-    logBuffer *lBuf;
-    char isdomain = FALSE, *domain, *System;
-
-    /*
-     * sometimes system is mbaddr, which is not good, because later on down
-     * the line we call findMessage, which will result in (unfortunately)
-     * mbaddr being overwritten.  So we dup system.
-     */
-    System = strdup(system);
-    if (flags & CREDIT_SENDER) lBuf = &logBuf;
-    else		 lBuf = &logTmp;
-
-    if (strlen(System)) {
-	isdomain = (domain = strchr(System, '_')) != NULL;
-	if (!isdomain) {
-	    slot = searchNameNet(System, &netTemp);
-	    cost = !netTemp.nbflags.local;
-	}
-	else {
-	    *domain++ = 0;
-	    NormStr(domain);
-	    NormStr(System);
-	    cost = FindCost(domain);
-	}
-    }
-    else {
-	slot = thisNet;
-	cost = 0;
-	getNet(thisNet, &netTemp);	/* &L mail */
-	system = netTemp.netName;
-    }
-
-    if (cost > lBuf->credit && !(lBuf == &logBuf && HalfSysop())) {
-	free(System);
-	return ;
-    }
-
-    lBuf->credit -= cost;
-
-    if (SearchList(&SysList, system) == NULL) {
-	AddData(&SysList, strdup(system), NULL, FALSE);
-	netMailOut(isdomain, System, domain, TRUE, slot, flags);
-    }
-    free(System);
-
-    if (lBuf->credit < 0)
-	lBuf->credit = 0;
 }
 
 /*
@@ -1854,7 +1854,7 @@ char putMessage(logBuffer *lBuf, UNS_16 flags)
 
     /* This writes out the list of CC people to the message base. */
     /* Note we don't usually write Overrides to the message base. */
-    RunListA(&msgBuf.mbCC, DisplayCC, (void *) MSGBASE);
+    RunListA(&msgBuf.mbCC, (void(*)(void*,void*))DisplayCC, (void *) MSGBASE);
 
     /* save foreign fields */
     RunList(&msgBuf.mbForeign, dLine);
@@ -2012,6 +2012,30 @@ int putMsgChar(char c)
     }
     if (count1)
 	++cfg.oldest;	/* wrote over a message */
+    return toReturn;
+}
+
+/*
+ * InterruptMessage()
+ *
+ * This handles Pause-Enter.
+ */
+static char InterruptMessage()
+{
+    char toReturn = FALSE;
+
+    Showing = WHATEVER;
+    if (heldMess) {
+	if (hldMessage(FALSE)) toReturn = TRUE;
+    }
+    else {
+	if (makeMessage(ASCII)) toReturn = TRUE;
+    }
+
+    MsgStreamEnter = FALSE;
+    Showing = MSGS;
+    outFlag = OUTOK;	/* so we can Pause later */
+
     return toReturn;
 }
 
@@ -2261,30 +2285,6 @@ int showMessages(int flags, MSG_NUMBER LastMsg, ValidateShowMsg_f_t *Style)
 	if (!(flags & MSG_LEAVE_PAGEABLE))
 	    PagingOff();
     return MsgCount;
-}
-
-/*
- * InterruptMessage()
- *
- * This handles Pause-Enter.
- */
-static char InterruptMessage()
-{
-    char toReturn = FALSE;
-
-    Showing = WHATEVER;
-    if (heldMess) {
-	if (hldMessage(FALSE)) toReturn = TRUE;
-    }
-    else {
-	if (makeMessage(ASCII)) toReturn = TRUE;
-    }
-
-    MsgStreamEnter = FALSE;
-    Showing = MSGS;
-    outFlag = OUTOK;	/* so we can Pause later */
-
-    return toReturn;
 }
 
 /*

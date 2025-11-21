@@ -5,6 +5,7 @@
  */
 
 #include "ctdl.h"
+#include <errno.h>
 
 /*
  *	                        history
@@ -121,42 +122,6 @@ int IgnoredUsers(int from, int (*fn)(int))
 		if (from == mr.auth_slot) {
 			if (!(*fn)(mr.detested_slot))
 				break;
-		}
-	}
-
-	fclose(upfd);
-
-	return TRUE;
-}
-
-/*
- * IgMailRemoveEntries
- *
- * This function removes the specified author/target pair from the list of
- * ignored users.  If target is -1, all entries pertaining to source are
- * removed (for instance, if a user is deleted or rolled over).  Same if
- * source is -1.
- */
-int IgMailRemoveEntries(int source, int target)
-{
-	IgnoreUserMailRecord mr;
-	int tracker;
-
-	if ((upfd = fopen(IgnoreMailFileName, R_W_ANY)) == NULL) {
-		return TRUE;
-	}
-
-	for (tracker = 0;
-	     fread(&mr, 1, sizeof mr, upfd) == sizeof mr;
-	     tracker++) {
-		if ((mr.auth_slot == source && mr.detested_slot == target) ||
-	            (source == -1 && mr.detested_slot == target) ||
-	            (mr.auth_slot == source && target == -1)) {
-			mr.auth_slot = -1;
-			mr.detested_slot = -1;
-			fseek(upfd, tracker * sizeof mr, 0);
-			fwrite(&mr, 1, sizeof mr, upfd);
-			IgnoreMailDisturbed = TRUE;
 		}
 	}
 

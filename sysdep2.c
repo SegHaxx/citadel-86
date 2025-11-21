@@ -18,7 +18,7 @@
 #define TIMER_FUNCTIONS_NEEDED
 
 #include "ctdl.h"
-#include "sys\stat.h"
+#include "sys/stat.h"
 #include "ctype.h"
 #include "stdarg.h"
 

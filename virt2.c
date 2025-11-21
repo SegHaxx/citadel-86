@@ -49,13 +49,6 @@ extern char	 *READ_ANY, *APPEND_ANY;
 extern FILE *upfd;
 extern char *W_R_ANY;
 
-char VNeedSend(SharedRoom *room, int roomslot, char NotPeon);
-char VirtualOutgoingMessages(SharedRoom *room, int roomslot);
-int ThrowAll(int which, char *distance, MSG_NUMBER start, MSG_NUMBER end,
-						int (*SendFunc)(int c));
-int SendVirtualNormalMessages(SharedRoomData *room, int roomslot,
-						int (*SendFunc)(int c));
-
 /*
  * VirtualOutgoingMessages()
  *
@@ -95,69 +88,11 @@ int VirtRoomRoutable(SharedRoomData *room, int system, int roomslot, void *d)
 }
 
 /*
- * SendVirtual()
- *
- * This function manages sending a room to another system.
- */
-int SendVirtual(SharedRoomData *room)
-{
-    char	work[15];
-    int		roomslot, count = 0;
-
-    roomslot = netRoomSlot(room->room);
-
-    if (VGetFA(room->room->mode)) {
-	sprintf(work, V_CACHE_END_NAME, roomslot);
-	if (SendPrepAsNormal(work, &count))
-	    VUnSetFA(room->room->mode);
-    }
-
-    splitF(netLog, "Sending %s (virtual) ", VRoomTab[roomslot].vrName);
-    count += SendVirtualNormalMessages(room, roomslot, sendITLchar);
-    return count;
-}
-
-/*
- * SendVirtualNormalMessages()
- *
- * Sends normal virtual messages to some destination.
- */
-static int SendVirtualNormalMessages(SharedRoomData *room, int roomslot,
-						int (*SendFunc)(int c))
-{
-    int		count;
-    MSG_NUMBER	StartMsg;
-
-	/* Send all the new LD messages received */
-    StartMsg = room->room->lastMess;
-    count = ThrowAll(roomslot, LD_DIR, StartMsg, VRoomTab[roomslot].vrHiLD,
-								SendFunc);
-    if (TrError == TRAN_SUCCESS) {
-	room->room->lastMess = VRoomTab[roomslot].vrHiLD;
-	room->srd_flags |= SRD_DIRTY;
-    }
-
-    if (VGetMode(room->room->mode) != PEON) {
-	StartMsg = room->room->lastPeon;
-	count += ThrowAll(roomslot, LOCAL_DIR, StartMsg, 
-					VRoomTab[roomslot].vrHiLocal, SendFunc);
-	if (TrError == TRAN_SUCCESS) {
-	    room->room->lastPeon = VRoomTab[roomslot].vrHiLocal;
-	    room->srd_flags |= SRD_DIRTY;
-	}
-    }
-    VRoomTab[roomslot].vrChanged |= SENT_DATA;
-    return count;
-}
-
-/*
  * ThrowAll()
  *
  * This function sends a virtual room to another system.
  */
-static int ThrowAll(int which, char *distance, MSG_NUMBER start, MSG_NUMBER end,
-						int (*SendFunc)(int c))
-{
+static int ThrowAll(int which, char *distance, MSG_NUMBER start, MSG_NUMBER end, int (*SendFunc)(int c)){
 #ifndef NO_VIRTUAL_ROOMS
 	MSG_NUMBER  rover;
 	int		count=0, slot;
@@ -194,6 +129,60 @@ static int ThrowAll(int which, char *distance, MSG_NUMBER start, MSG_NUMBER end,
 #else
 	return 0;
 #endif
+}
+
+/*
+ * SendVirtualNormalMessages()
+ *
+ * Sends normal virtual messages to some destination.
+ */
+static int SendVirtualNormalMessages(SharedRoomData *room, int roomslot, int (*SendFunc)(int c)){
+    int		count;
+    MSG_NUMBER	StartMsg;
+
+	/* Send all the new LD messages received */
+    StartMsg = room->room->lastMess;
+    count = ThrowAll(roomslot, LD_DIR, StartMsg, VRoomTab[roomslot].vrHiLD,
+								SendFunc);
+    if (TrError == TRAN_SUCCESS) {
+	room->room->lastMess = VRoomTab[roomslot].vrHiLD;
+	room->srd_flags |= SRD_DIRTY;
+    }
+
+    if (VGetMode(room->room->mode) != PEON) {
+	StartMsg = room->room->lastPeon;
+	count += ThrowAll(roomslot, LOCAL_DIR, StartMsg, 
+					VRoomTab[roomslot].vrHiLocal, SendFunc);
+	if (TrError == TRAN_SUCCESS) {
+	    room->room->lastPeon = VRoomTab[roomslot].vrHiLocal;
+	    room->srd_flags |= SRD_DIRTY;
+	}
+    }
+    VRoomTab[roomslot].vrChanged |= SENT_DATA;
+    return count;
+}
+
+/*
+ * SendVirtual()
+ *
+ * This function manages sending a room to another system.
+ */
+int SendVirtual(SharedRoomData *room)
+{
+    char	work[15];
+    int		roomslot, count = 0;
+
+    roomslot = netRoomSlot(room->room);
+
+    if (VGetFA(room->room->mode)) {
+	sprintf(work, V_CACHE_END_NAME, roomslot);
+	if (SendPrepAsNormal(work, &count))
+	    VUnSetFA(room->room->mode);
+    }
+
+    splitF(netLog, "Sending %s (virtual) ", VRoomTab[roomslot].vrName);
+    count += SendVirtualNormalMessages(room, roomslot, sendITLchar);
+    return count;
 }
 
 /*
@@ -247,50 +236,12 @@ void SetUpForVirtuals(SharedRoom *room, int *roomslot, char *fn)
     CreateVAName(fn, *roomslot, distance, rover);
 }
 
-char VirtualCheck(SharedRoomData *room, int roomslot, int *cmd);
-
-/*
- * SendVirtualRoom()
- *
- * This function transfers a virtual room's contents to another system.
- */
-int SendVirtualRoom(SharedRoomData *room, int system, int roomslot, void *d)
-{
-	char		 doit;
-	int		 *slot;
-	int		 cmd;
-	extern char	 MassTransferSent;
-	SystemCallRecord *called;
-
-	called = d;
-
-	if (!gotCarrier()) return ERROR;
-
-	if (SearchList(&called->SentVirtualRooms, &roomslot) != NULL) {
-		return TRUE;	/* already sent, perhaps in another connect */
-	}
-
-	doit = VirtualCheck(room, roomslot, &cmd);
-	if (doit && !MassTransferSent) {
-		ITL_optimize(TRUE);
-		if (findAndSend(cmd, room, SendVirtual,
-				VRoomTab[roomslot].vrName, RecVirtualRoom)) {
-			slot = GetDynamic(sizeof *slot);
-			(*slot) = roomslot;
-			AddData(&called->SentVirtualRooms, slot, NULL, FALSE);
-		}
-	}
-	return TRUE;
-}
-
-/* #define VC_DEBUG */
 /*
  * VirtualCheck()
  *
  * This handles deciding if a room should be sent.
  */
-static char VirtualCheck(SharedRoomData *room, int roomslot, int *cmd)
-{
+static char VirtualCheck(SharedRoomData *room, int roomslot, int *cmd){
     char doit;
     extern char inReceive;
 
@@ -327,16 +278,37 @@ static char VirtualCheck(SharedRoomData *room, int roomslot, int *cmd)
 }
 
 /*
- * VNeedSend()
+ * SendVirtualRoom()
  *
- * Determines if we need to send messages in a virtual regardless of the
- * mode, except we know it's a backbone situation (so check both local and
- * backbones).
+ * This function transfers a virtual room's contents to another system.
  */
-static char VNeedSend(SharedRoom *room, int roomslot, char NotPeon)
+int SendVirtualRoom(SharedRoomData *room, int system, int roomslot, void *d)
 {
-    return (room->lastMess < VRoomTab[roomslot].vrHiLD ||
-	(NotPeon && room->lastPeon < VRoomTab[roomslot].vrHiLocal));
+	char		 doit;
+	int		 *slot;
+	int		 cmd;
+	extern char	 MassTransferSent;
+	SystemCallRecord *called;
+
+	called = d;
+
+	if (!gotCarrier()) return ERROR;
+
+	if (SearchList(&called->SentVirtualRooms, &roomslot) != NULL) {
+		return TRUE;	/* already sent, perhaps in another connect */
+	}
+
+	doit = VirtualCheck(room, roomslot, &cmd);
+	if (doit && !MassTransferSent) {
+		ITL_optimize(TRUE);
+		if (findAndSend(cmd, room, SendVirtual,
+				VRoomTab[roomslot].vrName, RecVirtualRoom)) {
+			slot = GetDynamic(sizeof *slot);
+			(*slot) = roomslot;
+			AddData(&called->SentVirtualRooms, slot, NULL, FALSE);
+		}
+	}
+	return TRUE;
 }
 
 /*
@@ -417,6 +389,18 @@ int VirtualRoomOutgoing(SharedRoomData *room, int system, int roomslot,
 	return ERROR;
     }
     return TRUE;
+}
+
+/*
+ * VNeedSend()
+ *
+ * Determines if we need to send messages in a virtual regardless of the
+ * mode, except we know it's a backbone situation (so check both local and
+ * backbones).
+ */
+static char VNeedSend(SharedRoom *room, int roomslot, char NotPeon){
+    return (room->lastMess < VRoomTab[roomslot].vrHiLD ||
+	(NotPeon && room->lastPeon < VRoomTab[roomslot].vrHiLocal));
 }
 
 /*

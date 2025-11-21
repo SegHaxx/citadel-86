@@ -50,8 +50,8 @@ typedef struct {
     int       toReturn;
 } EventList;
 
-void *byaddr();
-int eventSort();
+static void* byaddr(void* x,void* y);
+static int eventSort(EVENT* s1,EVENT* s2);
 static EventList Types [] = {
     { { NULL, byaddr, eventSort, NoFree, NULL }, -1l, -1l, TRUE  },
     { { NULL, byaddr, eventSort, NoFree, NULL }, -1l, -1l, FALSE },
@@ -115,7 +115,36 @@ extern char   ExitToMsdos;
 extern int    exitValue;
 extern long   Dl_Limit;    /* Yuck, but necessary */
 
-void SetAbs(EventList *list, long LastAbs);
+/*
+ * SetAbs()
+ *
+ * This function calculates when the next event is supposed to occur for the
+ * given type.  This is calculated in terms of absolute time, making later
+ * comparisons much easier to deal with.  Since it's possible that this
+ * function will be called when we're actually already into some event's
+ * period, we have to take this into account.  That should explain the check
+ * for during() at the end of the function.
+ */
+static void SetAbs(EventList *list, long LowLimit)
+{
+    long temp, InSeconds;
+
+    if ((Cur = (EVENT *) GetFirst(&list->List)) != NULL) {
+	InitEvTimes();
+	temp = (long) Cur->EvMinutes;
+	InSeconds = temp * 60l;
+	if (during(Cur))
+	    list->NextAbs = ThisAbsolute - WeekDiff(ThisSecond, InSeconds);
+	else if (LowLimit != -1l) {
+	    if (ThisAbsolute - WeekDiff(ThisSecond, InSeconds) > LowLimit)
+		list->NextAbs = ThisAbsolute - WeekDiff(ThisSecond, InSeconds);
+	    else
+		list->NextAbs = ThisAbsolute + WeekDiff(InSeconds, ThisSecond);
+	}
+	else
+	    list->NextAbs = ThisAbsolute + WeekDiff(InSeconds, ThisSecond);
+    }
+}
 
 /*
  * InitEvents()
@@ -225,37 +254,6 @@ int passed(EVENT *x)
 }
 
 /*
- * SetAbs()
- *
- * This function calculates when the next event is supposed to occur for the
- * given type.  This is calculated in terms of absolute time, making later
- * comparisons much easier to deal with.  Since it's possible that this
- * function will be called when we're actually already into some event's
- * period, we have to take this into account.  That should explain the check
- * for during() at the end of the function.
- */
-static void SetAbs(EventList *list, long LowLimit)
-{
-    long temp, InSeconds;
-
-    if ((Cur = (EVENT *) GetFirst(&list->List)) != NULL) {
-	InitEvTimes();
-	temp = (long) Cur->EvMinutes;
-	InSeconds = temp * 60l;
-	if (during(Cur))
-	    list->NextAbs = ThisAbsolute - WeekDiff(ThisSecond, InSeconds);
-	else if (LowLimit != -1l) {
-	    if (ThisAbsolute - WeekDiff(ThisSecond, InSeconds) > LowLimit)
-		list->NextAbs = ThisAbsolute - WeekDiff(ThisSecond, InSeconds);
-	    else
-		list->NextAbs = ThisAbsolute + WeekDiff(InSeconds, ThisSecond);
-	}
-	else
-	    list->NextAbs = ThisAbsolute + WeekDiff(InSeconds, ThisSecond);
-    }
-}
-
-/*
  * WeekDiff()
  *
  * This function figures out difference in time between events, taking into
@@ -315,6 +313,23 @@ int CheckAutoDoor(char *name)
 }
 
 /*
+ * Activate()
+ *
+ * This function is used to run through the list of day-based events.  Any
+ * matching today are placed on the appropriate list after their EvMinute
+ * field is adjusted accordingly.  They are taken off whatever list they are
+ * placed on after they complete -- see end of FigureEvents().
+ */
+static void Activate(EVENT *evt, int *day)
+{
+    if (evt->EvDay == *day) {
+	evt->EvMinutes = ((WhatDay() * 1440) + evt->EvTimeDay);
+	AddData(&Types[evt->EvType].List, evt, NULL, FALSE);
+	SetAbs(&Types[evt->EvType], Types[evt->EvType].LastAbs);
+    }
+}
+
+/*
  * DoTimeouts()
  *
  * This is the function responsible for actual checking of timeouts.  It
@@ -333,7 +348,6 @@ char DoTimeouts()
     TwoNumbers *tmp;
     EvDoorRec  *evtmp;
     extern SListBase UntilNetSessions;
-    void Activate();
     char Oldpage;
 
     getRawDate(&yr, &mon, &dy, &hr, &mn, &secs, &milli);
@@ -347,7 +361,7 @@ char DoTimeouts()
 
     if (LastDay != dy) {
 	LastDay = dy;
-	RunListA(&DayBased, Activate, (void *) &LastDay);
+	RunListA(&DayBased, (void(*)(void*,void*))&Activate, (void *) &LastDay);
     }
 
     ThisMinute = (WhatDay() * 1440) + (hr * 60) + mn;
@@ -458,23 +472,6 @@ char DoTimeouts()
     }
 
     return ExitToMsdos;
-}
-
-/*
- * Activate()
- *
- * This function is used to run through the list of day-based events.  Any
- * matching today are placed on the appropriate list after their EvMinute
- * field is adjusted accordingly.  They are taken off whatever list they are
- * placed on after they complete -- see end of FigureEvents().
- */
-static void Activate(EVENT *evt, int *day)
-{
-    if (evt->EvDay == *day) {
-	evt->EvMinutes = ((WhatDay() * 1440) + evt->EvTimeDay);
-	AddData(&Types[evt->EvType].List, evt, NULL, FALSE);
-	SetAbs(&Types[evt->EvType], Types[evt->EvType].LastAbs);
-    }
 }
 
 /*

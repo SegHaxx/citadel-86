@@ -12,6 +12,7 @@
  */
 
 #include "ctdl.h"
+#include <ctype.h>
 
 /*
  *				contents

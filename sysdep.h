@@ -17,26 +17,24 @@
 
 #define COPYRIGHT "Copyright (c) 1988 - 1998 by Hue, Jr."
 
-#define TURBO_C
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <errno.h>
 
-#ifdef TURBO_C
+#include "citcolor.h"
+
+#ifdef __MSDOS__
 
 #ifndef NO_EXTRA_HEADERS
-
-#include "stdlib.h"
 #include "dos.h"
 #include "dir.h"
-#include "string.h"
 #include "mem.h"
 #include "io.h"
 #include "conio.h"
 #include "keystrk.h"
-
 #endif
-
-#include "ctype.h"
-
-#include "citcolor.h"
 
 #endif
 
@@ -201,10 +199,20 @@ extern char TDirBuffer[];
 #define KBReady()       kbhit()
 
 #define totalBytes(x, fd)       *(x) = filelength(fileno(fd))
+#ifdef __MSDOS__
 #define DoBdos(x, y)    bdos(x, y, 0)
+#else
+#define DoBdos(x, y)    /**/
+#endif
 
+#ifdef __MSDOS__
 #define ChatEat(c)	c == PG_DN
 #define ChatSend(c)	c == PG_UP
+#else
+// FIXME: portability
+#define ChatEat(c)	FALSE
+#define ChatSend(c)	FALSE
+#endif
 
 #define NeedSysopInpPrompt()	(onConsole && !cfg.DepData.OldVideo)
 
