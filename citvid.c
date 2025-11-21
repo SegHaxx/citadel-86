@@ -11,7 +11,9 @@
 
 #define VMODULE
 #include "ctdl.h"
+#ifdef __MSDOS__
 #include <dos.h>
+#endif
 
 #include "citvid.h"
 
@@ -37,21 +39,27 @@ void video ( char *tagline ) {
 }
 
 void vsetmode ( byte mode ) {
+#ifdef __MSDOS__
    _AH = 0;
    _AL = mode;
    geninterrupt ( VIDEO );
+#endif
 }
 
 byte vgetmode ( void ) {
+#ifdef __MSDOS__
    _AH = 15;
    geninterrupt ( VIDEO );
    return ( _AL );
+#endif
 }
 
 void vsetpage ( byte page ) {
+#ifdef __MSDOS__
    _AH = 5;
    _AL = page;
    geninterrupt ( VIDEO );
+#endif
 }
 
 void vsetup ( void ) {
@@ -66,12 +74,14 @@ void vsetup ( void ) {
 }
 
 void vlocate ( byte row, byte col ) {
+#ifdef __MSDOS__
    _AH = 2;
    _DH = row;
    _DL = col;
    _BH = 0;
    geninterrupt ( VIDEO );
    vrow = row; vcol = col;
+#endif
 }
 
 int vputs ( char *string ) {
@@ -87,6 +97,7 @@ void vbump ( void ) {
 
 void vscroll( int num)
 {
+#ifdef __MSDOS__
    _AH = 6;	 /* scroll */
    _CH = vtop;
    _DH = vbot;
@@ -95,6 +106,7 @@ void vscroll( int num)
    _BH = vatt;
    _AL = num;	 /* number of lines */
    geninterrupt ( VIDEO );
+#endif
 }
 
 byte vputch ( byte c ) {
@@ -133,12 +145,14 @@ byte vputch ( byte c ) {
 	}
 	break;
       default :
+#ifdef __MSDOS__
 	_AH = 9;
 	_AL = c;
 	_CX = 1;
 	_BL = vatt;
 	_BH = 0;
 	geninterrupt ( VIDEO );
+#endif
 	if ( vcol == vright ) {
 	   vcol = vleft;
 	   if ( vrow == vbot )

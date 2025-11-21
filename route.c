@@ -531,22 +531,6 @@ extern SListBase Routes;
 
 static char CheckForRouting;
 /*
- * AnyRouted()
- *
- * This function determines if there is any need to call a node due to mail
- * routing.
- */
-char AnyRouted(int i)
-{
-    void CheckRouting();
-
-    if (SearchList(&Routes, &i) != NULL) return FALSE;
-    CheckForRouting = FALSE;
-    RunListA(&Routes, CheckRouting, &i);
-    return CheckForRouting;
-}
-
-/*
  * CheckRouting()
  *
  * This function helps us determine if a specified node should be called
@@ -554,12 +538,26 @@ char AnyRouted(int i)
  * of Routes for the specified node being the via node, and then for mail
  * needing to be sent.
  */
-static void CheckRouting(Routing *element, int *i)
-{
+static void CheckRouting(Routing *element, int *i){
     if (CheckForRouting) return;
     if (element->Via != *i) return;
     if (netTab[element->Target].ntflags.normal_mail) CheckForRouting++;
     if (netTab[element->Target].ntflags.HasRouted) CheckForRouting++;
+}
+
+/*
+ * AnyRouted()
+ *
+ * This function determines if there is any need to call a node due to mail
+ * routing.
+ */
+char AnyRouted(int i){
+    void CheckRouting();
+
+    if (SearchList(&Routes, &i) != NULL) return FALSE;
+    CheckForRouting = FALSE;
+    RunListA(&Routes, (void(*)(void*,void*))CheckRouting, &i);
+    return CheckForRouting;
 }
 
 /*

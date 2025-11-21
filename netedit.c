@@ -54,205 +54,28 @@ extern NetTable  *netTab;
 static void GetAllSharedRooms(void);
 
 /*
- * netStuff()
+ * MemberNets()
  *
- * This function handles main net menu.
+ * This adds nets to this system's list.
  */
-void netStuff()
-{
-    extern char *who_str;
-    extern char ForceNet;
-    TwoNumbers  tmp;
-    char	work[50];
-    label       who;
-    int		logNo;
-    MenuId	id, id2;
-    long	Redials, duration;
-    char	*NetMiscOpts[] = {
-	"Add node to netlist\n", "Credit setting\n", "Dial system",
-	"Edit a node\n", "Initiate Anytime Net Session", "Local list\n",
-	"Net privileges\n", "Priority Mail\n", "Request File\n",
-	"Send File\n", "Until Done Net Sessions", "View net list\n", "X\beXit",
-#ifdef ZNEEDED
-"Z",
-#endif
-	""
-    };
-    int AdminPriorityMail(char *line, int arg);
+static int MemberNets(char *netnum, int add){
+    int num;
+    MULTI_NET_DATA temp;
 
-    /* If we don't net, don't allow this. */
-    if (!cfg.BoolFlags.netParticipant) {
-	SysopInfoReport(NO_MENU, "Networking is disabled on this installation.\n ");
-	return ;
+    num = atoi(netnum);
+    if (num < 1 || num > MAX_NET - 1) {
+	SysopError(NO_MENU, "There are only 31 nets to choose from.\n");
+	return TRUE;
     }
-
-    id = RegisterSysopMenu("netopt.mnu", NetMiscOpts, " Net Menu ", 0);
-    do {
-	outFlag = OUTOK;
-	RegisterThisMenu("netopt.mnu", NetMiscOpts);
-	SysopMenuPrompt(id, "\n Net function: ");
-	switch (GetSysopMenuChar(id)) {
-	    case ERROR:
-	    case 'X':
-		CloseSysopMenu(id);
-		return;
-	    case 'P':
-		getList(AdminPriorityMail, "Systems and Priority Mail",
-							NAMESIZE, TRUE, 0);
-		break;
-	    case 'I':
-		ForceAnytime();
-		sprintf(work, "now %s.\n ", ForceNet ? "ON" : "OFF");
-		SysopInfoReport(id, work);
-		break;
-	    case 'R':   /* File requests */
-		SysopRequestString(id, "System", who, sizeof who, 0);
-		if (!ReqNodeName("", who, NULL, RNN_SYSMENU, &netBuf))
-		    break;
-		fileRequest();
-		break;
-	    case 'S':   /* File transmissions */
-		SysopRequestString(id, "System", who, sizeof who, 0);
-		if (!ReqNodeName("", who, NULL, RNN_SYSMENU, &netBuf))
-		    break;
-		getSendFiles(id, who);
-		break;
-	    case 'C':   /* Set users' LD credits */
-		if ((logNo = GetUser(who, &logTmp, TRUE)) == ERROR ||
-				logNo == cfg.MAXLOGTAB) break;
-		sprintf(work,
-			"Currently %d credits.  How many now", logTmp.credit);
-		logTmp.credit = (int) SysopGetNumber(id, work, 0l, 1000l);
-		sprintf(work, "Set to %d.", logTmp.credit);
-		SysopInfoReport(id, work);
-		if (loggedIn  &&  strCmpU(logBuf.lbname, who) == SAMESTRING)
-		    logBuf.credit = logTmp.credit;
-
-		putLog(&logTmp, logNo);
-		break;
-	    case 'D':   /* Primitive dial out ability.  Don't get excited */
-		if (!onConsole) break;
-		if (gotCarrier()) {	/* carrier already?  just jump in */
-		    CloseSysopMenu(id);
-		    interact(FALSE);
-		    id = RegisterSysopMenu("netopt.mnu", NetMiscOpts,
-							" Net Menu ", 0);
-		    break;
-		}
-		/* Get node to call, if none specified abort */
-		SysopRequestString(id, "System", who, sizeof who, 0);
-		if (!ReqNodeName("", who, NULL, RNN_ONCE | RNN_SYSMENU,&netBuf))
-		    break;
-
-		/* How many times should we try to call? */
-		if ((Redials = SysopGetNumber(id, "# of redial attempts", 0l,
-							65000l)) <= 0l)
-		    Redials = 1l;       /* allow empty C/R to generate 1. */
-
-		/* Modem should be disabled since we're in CONSOLE mode. */
-		id2 = SysopContinual(netBuf.netName, "Dialing ...", 50, 13);
-		EnableModem(FALSE);
-		for (; Redials > 0l; Redials--) {
-		    /* if successful call, start chattin'! */
-		    if (makeCall(FALSE, id2)) {
-			SysopCloseContinual(id2);
-			CloseSysopMenu(id);
-			mputChar(BELL);
-			interact(FALSE);
-			id = RegisterSysopMenu("netopt.mnu", NetMiscOpts,
-							" Net Menu ", 0);
-			break;
-		    }
-		    /* This handles an abort from kbd */
-		    if (KBReady()) {
-			getCh();
-			/* Hope this turns off modem */
-			outMod(' '); pause(2);
-			DisableModem(FALSE);
-			break;
-		    }
-		    /* printf("Failed\n"); */
-		    /* Let modem stabilize for a moment. */
-		    for (startTimer(WORK_TIMER);chkTimeSince(WORK_TIMER) < 3l; )
-			;
-		}
-		SysopCloseContinual(id2);
-		/*
-		 * If we don't have carrier disable the modem.  We have this
-		 * check in case sysop wants to perform download within
-		 * Citadel.
-		 */
-		if (!gotCarrier()) {
-		    DisableModem(FALSE);
-		    modStat = haveCarrier = FALSE;
-		}
-		break;
-	    case 'V':   /* View the net list. */
-		CloseSysopMenu(id);
-		doCR();
-		writeNet(TRUE, FALSE);
-		if (NeedSysopInpPrompt()) modIn();
-		id = RegisterSysopMenu("netopt.mnu", NetMiscOpts,
-							" Net Menu ", 0);
-		break;
-	    case 'L':
-		CloseSysopMenu(id);
-		writeNet(TRUE, TRUE);
-		if (NeedSysopInpPrompt()) modIn();
-		id = RegisterSysopMenu("netopt.mnu", NetMiscOpts,
-							" Net Menu ", 0);
-		break;
-	    case 'A':   /* Add a new node to the list */
-		addNetNode();
-		break;
-	    case 'E':   /* Edit a node that is on the list */
-		SysopRequestString(id, "Name of system to edit", who, sizeof who,0);
-		if (!ReqNodeName("", who, NULL, RNN_ONCE | RNN_DISPLAY |
-							RNN_SYSMENU, &netBuf))
-		    break;
-
-		CloseSysopMenu(id);
-		editNode();
-		id = RegisterSysopMenu("netopt.mnu", NetMiscOpts,
-							" Net Menu ", 0);
-		break;
-	    case 'N':   /* Give someone net privileges. */
-		NetPrivs(who);
-		break;
-	    case 'U':
-		id2 = SysopContinual(" Net Session ", "", 30, 4);
-		SysopContinualString(id2, "Member Net", work, 3, 0);
-		tmp.first = atoi(work);
-		if (tmp.first < 1 || tmp.first > MAX_NET - 1) {
-		    if (strlen(work) != 0)
-			SysopError(id2, "Illegal Member Net");
-		}
-		else {
-		    if (SearchList(&UntilNetSessions, &tmp) != NULL) {
-			SysopInfoReport(NO_MENU, "Net session deactivated.\n");
-			KillData(&UntilNetSessions, &tmp);
-		    }
-		    else {
-			SysopContinualString(id2, "Duration", work, 4, 0);
-			duration = atol(work);
-			if (duration < 1l)
-			    SysopError(id2, "Illegal Duration");
-			else
-			    AddData(&UntilNetSessions,MakeTwo(tmp.first,duration),
-								NULL, FALSE);
-		    }
-		}
-		SysopCloseContinual(id2);
-		break;
-#ifdef ZNEEDED
-	    case 'Z':
-		inNet = NORMAL_NET;
-		AddNetMsgs("tempmail.$$$", inMail, FALSE, MAILROOM, TRUE);
-		inNet = NON_NET;
-		break;
-#endif
-	}
-    } while (onLine());
+    temp = 1l;
+    temp <<= (num-1);
+    if (add)
+	netBuf.MemberNets |= temp;
+    else {
+	temp = ~temp;
+	netBuf.MemberNets &= temp;
+    }
+    return TRUE;
 }
 
 /*
@@ -260,8 +83,7 @@ void netStuff()
  *
  * This handles the administration of priority mail.
  */
-static int AdminPriorityMail(char *system, int arg)
-{
+static int AdminPriorityMail(char *system, int arg){
     if (searchNameNet(system, &netBuf) == ERROR) {
 	SysopError(NO_MENU, "No such system\n");
     }
@@ -288,38 +110,19 @@ static int AdminPriorityMail(char *system, int arg)
 }
 
 /*
- * NetPrivs()
+ * addSendFile()
  *
- * This will setup net privs for someone.
+ * This is a work function, called indirectly by getList().
  */
-void NetPrivs(label who)
-{
-    int logNo, result;
-    char work[50];
+static int addSendFile(char *Files, int arg){
+    struct fl_send sendWhat;
 
-    if ((logNo = GetUser(who, &logTmp, TRUE)) == ERROR) return;
-    if (logNo == cfg.MAXLOGTAB) {
-	result = DoAllQuestion("Give everyone net privs",
-					"Take away everyone's net privs");
-	if (result == ERROR) return;
-	for (logNo = 0; logNo < cfg.MAXLOGTAB; logNo++) {
-    	    getLog(&logTmp, logNo);
-    	    if (!onConsole) mPrintf(".");
-    	    if (logTmp.lbflags.L_INUSE && logTmp.lbflags.NET_PRIVS != result) {
-    		logTmp.lbflags.NET_PRIVS = result;
-    		putLog(&logTmp, logNo);
-	    }
-	}
-	return;
+    if (sysGetSendFilesV2(GetListId, Files, &sendWhat)) {
+	putSLNet(sendWhat, upfd);
+	return TRUE;
     }
-    sprintf(work, "%s has %snet privileges\n ", who,
-				(logTmp.lbflags.NET_PRIVS) ? "no " : "");
-    if (!SysopGetYesNo(NO_MENU, work, confirm))   return;
-    logTmp.lbflags.NET_PRIVS = !logTmp.lbflags.NET_PRIVS;
-    if (strCmpU(logTmp.lbname, logBuf.lbname) == SAMESTRING)
-	logBuf.lbflags.NET_PRIVS = logTmp.lbflags.NET_PRIVS;
 
-    putLog(&logTmp, logNo);
+    return ERROR;
 }
 
 /*
@@ -327,8 +130,7 @@ void NetPrivs(label who)
  *
  * This will get the files from the sysop to send to another system.
  */
-static void getSendFiles(MenuId id, label sysName)
-{
+static void getSendFiles(MenuId id, label sysName){
     SYS_FILE       sysFile;
     char	   temp[10];
     extern char    *APPEND_ANY;
@@ -348,20 +150,60 @@ static void getSendFiles(MenuId id, label sysName)
 }
 
 /*
- * addSendFile()
+ * GetSystemName()
  *
- * This is a work function, called indirectly by getList().
+ * Get a new system name.
  */
-static int addSendFile(char *Files, int arg)
-{
-    struct fl_send sendWhat;
+static int GetSystemName(char *buf, int curslot, MenuId id){
+    char  goodAnswer;
+    int slot;
 
-    if (sysGetSendFilesV2(GetListId, Files, &sendWhat)) {
-	putSLNet(sendWhat, upfd);
-	return TRUE;
-    }
+    do {
+	SysopContinualString(id, "System name", buf, NAMESIZE, 0);
+	if (strlen(buf) == 0) {
+	    return FALSE;
+	}
+	if ((goodAnswer = strCmpU(ALL_LOCALS, buf)) == 0)
+	    SysopError(id, "Sorry, reserved name\n ");
+	else if (strchr(buf, '_') != NULL) {
+	    goodAnswer = FALSE;
+	    SysopError(id, "Please don't use '_' in the system name.\n ");
+	}
+	else {
+	    slot = searchNameNet(buf, &netTemp);
+	    if (slot != ERROR && slot != curslot) {
+		sprintf(msgBuf.mbtext, "Sorry, %s is already in use.\n ", buf);
+		SysopError(id, msgBuf.mbtext);
+		goodAnswer = FALSE;
+	    }
+	}
+    } while (!goodAnswer);
+    return TRUE;
+}
 
-    return ERROR;
+/*
+ * GetSystemId()
+ *
+ * This function gets a system id from the user and does error checking.
+ */
+static int GetSystemId(char *buf, int curslot, MenuId id){
+    char goodAnswer;
+    int  slot;
+
+    do {
+	goodAnswer = TRUE;
+	SysopContinualString(id, "System ID", buf, NAMESIZE, 0);
+	if (strlen(buf) == 0) {
+	    return FALSE;
+	}
+	if ((slot = searchNet(buf, &netTemp)) != ERROR && slot != curslot) {
+	    sprintf(msgBuf.mbtext, "Sorry, %s is already in use.\n ",
+							buf);
+	    SysopError(id, msgBuf.mbtext);
+	    goodAnswer = FALSE;
+	}
+    } while (!goodAnswer);
+    return TRUE;
 }
 
 /*
@@ -369,8 +211,7 @@ static int addSendFile(char *Files, int arg)
  *
  * This adds a node to the net listing.
  */
-static void addNetNode()
-{
+static void addNetNode(){
     int searcher, gen;
     char  found;
     extern char *ALL_LOCALS;
@@ -447,88 +288,227 @@ static void addNetNode()
 }
 
 /*
- * GetSystemName()
+ * AddSharedRooms()
  *
- * Get a new system name.
+ * This function allows the addition of shared rooms from node editing.
  */
-static int GetSystemName(char *buf, int curslot, MenuId id)
-{
-    char  goodAnswer;
-    int slot;
+static int AddSharedRooms(char *data, int ShType){
+    extern VirtualRoom *VRoomTab;
+    int roomslot;
+    RoomSearch arg;
+    SharedRoomData *room;
+    char virt = FALSE;
 
-    do {
-	SysopContinualString(id, "System name", buf, NAMESIZE, 0);
-	if (strlen(buf) == 0) {
-	    return FALSE;
-	}
-	if ((goodAnswer = strCmpU(ALL_LOCALS, buf)) == 0)
-	    SysopError(id, "Sorry, reserved name\n ");
-	else if (strchr(buf, '_') != NULL) {
-	    goodAnswer = FALSE;
-	    SysopError(id, "Please don't use '_' in the system name.\n ");
-	}
-	else {
-	    slot = searchNameNet(buf, &netTemp);
-	    if (slot != ERROR && slot != curslot) {
-		sprintf(msgBuf.mbtext, "Sorry, %s is already in use.\n ", buf);
-		SysopError(id, msgBuf.mbtext);
-		goodAnswer = FALSE;
-	    }
-	}
-    } while (!goodAnswer);
-    return TRUE;
-}
-
-/*
- * GetSystemId()
- *
- * This function gets a system id from the user and does error checking.
- */
-static int GetSystemId(char *buf, int curslot, MenuId id)
-{
-    char goodAnswer;
-    int  slot;
-
-    do {
-	goodAnswer = TRUE;
-	SysopContinualString(id, "System ID", buf, NAMESIZE, 0);
-	if (strlen(buf) == 0) {
-	    return FALSE;
-	}
-	if ((slot = searchNet(buf, &netTemp)) != ERROR && slot != curslot) {
-	    sprintf(msgBuf.mbtext, "Sorry, %s is already in use.\n ",
-							buf);
-	    SysopError(id, msgBuf.mbtext);
-	    goodAnswer = FALSE;
-	}
-    } while (!goodAnswer);
-    return TRUE;
-}
-
-/*
- * MemberNets()
- *
- * This adds nets to this system's list.
- */
-static int MemberNets(char *netnum, int add)
-{
-    int num;
-    MULTI_NET_DATA temp;
-
-    num = atoi(netnum);
-    if (num < 1 || num > MAX_NET - 1) {
-	SysopError(NO_MENU, "There are only 31 nets to choose from.\n");
+    strcpy(arg.Room, data);
+    if (RoomRoutable(&arg)) {
+	SetMode(arg.room->room->mode, ShType);
+	arg.room->srd_flags |= SRD_DIRTY;
 	return TRUE;
     }
-    temp = 1l;
-    temp <<= (num-1);
-    if (add)
-	netBuf.MemberNets |= temp;
-    else {
-	temp = ~temp;
-	netBuf.MemberNets &= temp;
+
+    if ((roomslot = FindVirtualRoom(data)) == ERROR) {
+	if ((roomslot = roomExists(data)) == ERROR) {
+	    SysopPrintf(GetListId, "No such room.\n");
+	    return TRUE;
+	}
+	else if (!roomTab[roomslot].rtflags.SHARED) {
+	    SysopPrintf(GetListId, "Room is not shared.\n");
+	    return TRUE;
+	}
     }
+    else virt = TRUE;
+
+    room = NewSharedRoom();
+    room->room->srslot   = roomslot;
+    room->room->sr_flags = (virt) ? SR_VIRTUAL : 0;
+    room->room->lastPeon = VRoomTab[roomslot].vrLoLocal;
+    room->room->lastMess = (virt) ? VRoomTab[roomslot].vrLoLD : cfg.newest;
+    room->room->srgen    = (virt) ? 0 : roomTab[roomslot].rtgen + (unsigned) 0x8000;
+    room->room->netGen   = netBuf.nbGen;
+    room->room->netSlot  = thisNet;
+    SetMode(room->room->mode, ShType);
+
     return TRUE;
+}
+
+/*
+ * DelSharedRooms()
+ *
+ * This function kills the specified room sharing link, if it exists.
+ */
+static int DelSharedRooms(char *data, int arg){
+    RoomSearch search;
+
+    strcpy(search.Room, data);
+    if (!RoomRoutable(&search)) {
+	SysopPrintf(GetListId, "Not found\n");
+	return TRUE;
+    }
+    KillShared(search.room, thisNet, search.room->room->srslot, NULL);
+    return TRUE;
+}
+
+/*
+ * RoomStuff()
+ *
+ * This function handles the user when selecting 'r' on the net edit menu.
+ */
+static void RoomStuff(char *title){
+	char   work[50];
+	int    CurRoom;
+	MenuId id;
+	char *RoomOpts[] = {
+		"Add Rooms\n", "Get All Shared Rooms\n", "Show Rooms\n",
+		"Unshare Rooms", "X\beXit",
+		"",
+	};
+	char done = FALSE;
+
+	/*
+	 * We use SHOW_MENU_OLD so the options are printed every last time
+	 */
+	id = RegisterSysopMenu("netrooms.mnu", RoomOpts, title, 0);
+	CurRoom = thisRoom;
+	while (onLine() && !done) {
+		outFlag = OUTOK;
+		sprintf(work, "\n (Rooms: %s) edit fn: ", netBuf.netName);
+		SysopMenuPrompt(id, work);
+		switch (GetSysopMenuChar(id)) {
+		case ERROR:
+		case 'X':
+			done = TRUE;
+			break;
+		case 'A':
+			getList(AddSharedRooms, "Rooms to Share as Backbone", NAMESIZE,
+								TRUE, BACKBONE);
+			getList(AddSharedRooms,"Rooms to Share as Peon",NAMESIZE,
+								TRUE, PEON);
+			break;
+		case 'U':
+			getList(DelSharedRooms,"Rooms to Unshare",NAMESIZE,TRUE, 0);
+			break;
+		case 'S':
+			CloseSysopMenu(id);
+			PagingOn();
+			mPrintf("\n ");
+			EachSharedRoom(thisNet, DumpRoom, DumpVRoom, NULL);
+			if (onConsole) modIn();
+			PagingOff();
+			id = RegisterSysopMenu("netrooms.mnu", RoomOpts, title, 0);
+			break;
+		case 'G':
+			CloseSysopMenu(id);
+			GetAllSharedRooms();
+			id = RegisterSysopMenu("netrooms.mnu", RoomOpts, title, 0);
+		}
+	}
+	getRoom(CurRoom);	/* restore state */
+	UpdateSharedRooms();
+	CloseSysopMenu(id);
+}
+
+/*
+ * NodeValues()
+ *
+ * This function prints out the values for the current node.
+ */
+static void NodeValues(MenuId id){
+    int	i, first;
+    MULTI_NET_DATA h;
+
+    sprintf(msgBuf.mbtext, "\n Node #%d: %s", thisNet, netBuf.netName);
+    if (strlen(netBuf.nbShort))
+	sprintf(lbyte(msgBuf.mbtext), " (%s)", netBuf.nbShort);
+
+    sprintf(lbyte(msgBuf.mbtext), "\n Id: %s (%slocal @ %s)\n ",
+				netBuf.netId,
+				netBuf.nbflags.local ? "" : "non",
+				SupportedBauds[netBuf.baudCode]);
+
+    if (netBuf.nbflags.ExternalDialer)
+	sprintf(lbyte(msgBuf.mbtext), "External Dialer Information: %s\n ",
+								netBuf.access);
+
+    if (strlen(netBuf.access) != 0 && !netBuf.nbflags.ExternalDialer)
+	sprintf(lbyte(msgBuf.mbtext), "Access: %s\n ", netBuf.access);
+
+    if (netBuf.nbflags.spine)
+	sprintf(lbyte(msgBuf.mbtext), "We are a spine\n ");
+    else if (netBuf.nbflags.is_spine)
+	sprintf(lbyte(msgBuf.mbtext), "This system is a spine\n ");
+
+    if (netBuf.nbflags.OtherNet)
+	sprintf(lbyte(msgBuf.mbtext), "OtherNet system.\n ");
+
+    if (netBuf.nbflags.normal_mail || netBuf.nbflags.HasRouted)
+	sprintf(lbyte(msgBuf.mbtext), "Outgoing Mail>.\n ");
+
+    if (DomainFlags[thisNet])
+	sprintf(lbyte(msgBuf.mbtext), "Outgoing DomainMail.\n ");
+
+    if (AnyRouted(thisNet))
+	sprintf(lbyte(msgBuf.mbtext), "Mail routed via this system.\n ");
+
+    if (netBuf.nbflags.room_files)
+	sprintf(lbyte(msgBuf.mbtext), "File requests outstanding.\n ");
+
+    if (netBuf.nbflags.send_files)
+	sprintf(lbyte(msgBuf.mbtext), "Files to be sent.\n ");
+
+    if (netBuf.nbflags.MassTransfer)
+	sprintf(lbyte(msgBuf.mbtext), "Fast Transfers on (using %s).\n ",
+				GetCompEnglish(netBuf.nbCompress));
+
+    if (netBuf.nbflags.Login)
+	sprintf(lbyte(msgBuf.mbtext), "Wait for Room Prompt on call\n ");
+
+    if (netBuf.MemberNets != 0l) {
+	sprintf(lbyte(msgBuf.mbtext), "Assigned to net(s) ");
+	for (i = 0, first = 1, h = 1l; i < MAX_NET; i++) {
+	    if (h & netBuf.MemberNets) {
+		if (!first)
+		    sprintf(lbyte(msgBuf.mbtext), ", ");
+		else first = FALSE;
+
+		/* Yes - +1. Number the bits starting with 1 */
+		sprintf(lbyte(msgBuf.mbtext), "%d", i+1);
+	    }
+	    h <<= 1;
+	}
+	sprintf(lbyte(msgBuf.mbtext), ".\n ");
+    }
+    else sprintf(lbyte(msgBuf.mbtext), "System is disabled.\n ");
+
+    sprintf(lbyte(msgBuf.mbtext), "Last connected: %s\n",
+					AbsToReadable(netBuf.nbLastConnect));
+    SysopDisplayInfo(id, msgBuf.mbtext, " Values ");
+}
+
+/*
+ * KillTempFiles()
+ *
+ * This eliminates unneeded temp files for dead node.
+ */
+static void KillTempFiles(int which){
+    label    temp;
+    SYS_FILE temp2;
+
+    sprintf(temp, "%d.ml", which);
+    makeSysName(temp2, temp, &cfg.netArea);
+    unlink(temp2);
+    netBuf.nbflags.normal_mail = FALSE;
+    sprintf(temp, "%d.rfl", which);
+    makeSysName(temp2, temp, &cfg.netArea);
+    unlink(temp2);
+    netBuf.nbflags.room_files = FALSE;
+    sprintf(temp, "%d.sfl", which);
+    makeSysName(temp2, temp, &cfg.netArea);
+    unlink(temp2);
+    netBuf.nbflags.send_files = FALSE;
+    sprintf(temp, "%d.vtx", which);
+    makeSysName(temp2, temp, &cfg.netArea);
+    unlink(temp2);
+    InitVNode(thisNet);
 }
 
 /*
@@ -536,8 +516,7 @@ static int MemberNets(char *netnum, int add)
  *
  * This function will edit a net node.
  */
-static void editNode()
-{
+static void editNode(){
     label  temp2;
     char   title[50], work[80], temp[NAMESIZE*3];
     int    place, compress;
@@ -725,65 +704,303 @@ static void editNode()
 }
 
 /*
- * RoomStuff()
+ * fileRequest()
  *
- * This function handles the user when selecting 'r' on the net edit menu.
+ * This handles the administration of requesting files from another system.
  */
-static void RoomStuff(char *title)
-{
-	char   work[50];
-	int    CurRoom;
-	int AddSharedRooms(char *data, int arg);
-	int DelSharedRooms(char *data, int arg);
-	MenuId id;
-	char *RoomOpts[] = {
-		"Add Rooms\n", "Get All Shared Rooms\n", "Show Rooms\n",
-		"Unshare Rooms", "X\beXit",
-		"",
-	};
-	char done = FALSE;
+static void fileRequest(){
+    struct fl_req file_data;
+    label    data;
+    char     loc[100], *c, *work;
+    SYS_FILE fn;
+    char     abort;
+    FILE     *temp;
+    int      place;
+    extern char *APPEND_ANY;
+    char     ambiguous, again;
+    MenuId   id;
 
-	/*
-	 * We use SHOW_MENU_OLD so the options are printed every last time
-	 */
-	id = RegisterSysopMenu("netrooms.mnu", RoomOpts, title, 0);
-	CurRoom = thisRoom;
-	while (onLine() && !done) {
-		outFlag = OUTOK;
-		sprintf(work, "\n (Rooms: %s) edit fn: ", netBuf.netName);
-		SysopMenuPrompt(id, work);
-		switch (GetSysopMenuChar(id)) {
-		case ERROR:
-		case 'X':
-			done = TRUE;
-			break;
-		case 'A':
-			getList(AddSharedRooms, "Rooms to Share as Backbone", NAMESIZE,
-								TRUE, BACKBONE);
-			getList(AddSharedRooms,"Rooms to Share as Peon",NAMESIZE,
-								TRUE, PEON);
-			break;
-		case 'U':
-			getList(DelSharedRooms,"Rooms to Unshare",NAMESIZE,TRUE, 0);
-			break;
-		case 'S':
-			CloseSysopMenu(id);
-			PagingOn();
-			mPrintf("\n ");
-			EachSharedRoom(thisNet, DumpRoom, DumpVRoom, NULL);
-			if (onConsole) modIn();
-			PagingOff();
-			id = RegisterSysopMenu("netrooms.mnu", RoomOpts, title, 0);
-			break;
-		case 'G':
-			CloseSysopMenu(id);
-			GetAllSharedRooms();
-			id = RegisterSysopMenu("netrooms.mnu", RoomOpts, title, 0);
-		}
+    place = thisNet;    /* again, a kludge to be killed later */
+
+    id = SysopContinual("", "", 75, 10);
+    sprintf(loc, "\nname of room on %s that has desired file", netBuf.netName);
+    SysopContinualString(id, loc, file_data.room, NAMESIZE, 0);
+    if (strlen(file_data.room) == 0) {
+	SysopCloseContinual(id);
+	return;
+    }
+
+    SysopContinualString(id, "\nthe file(s)'s name", loc, sizeof loc, 0);
+    if (strlen(loc) == 0) {
+	SysopCloseContinual(id);
+	return;
+    }
+
+    ambiguous = !(strchr(loc, '*') == NULL && strchr(loc, '?') == NULL &&
+		strchr(loc, ' ') == NULL);
+
+    abort = !netGetAreaV2(id, loc, &file_data, ambiguous);
+
+    if (!abort) {
+	sprintf(data, "%d.rfl", place);
+	makeSysName(fn, data, &cfg.netArea);
+	if ((temp = fopen(fn, APPEND_ANY)) == NULL) {
+	    SysopPrintf(id, "Couldn't append to '%s'????", fn);
 	}
-	getRoom(CurRoom);	/* restore state */
-	UpdateSharedRooms();
-	CloseSysopMenu(id);
+	else {
+	    work = loc;
+
+	    do {
+		again = (c = strchr(work, ' ')) != NULL;
+		if (again) *c = 0;
+		strcpy(file_data.roomfile, work);
+		if (ambiguous) strcpy(file_data.filename, work);
+		fwrite(&file_data, sizeof (file_data), 1, temp);
+		if (again) work = c + 1;
+	    } while (again);
+
+	    netBuf.nbflags.room_files = TRUE;
+	    putNet(place, &netBuf);
+	    fclose(temp);
+	}
+    }
+    SysopCloseContinual(id);
+}
+
+/*
+ * netStuff()
+ *
+ * This function handles main net menu.
+ */
+void netStuff()
+{
+    extern char *who_str;
+    extern char ForceNet;
+    TwoNumbers  tmp;
+    char	work[50];
+    label       who;
+    int		logNo;
+    MenuId	id, id2;
+    long	Redials, duration;
+    char	*NetMiscOpts[] = {
+	"Add node to netlist\n", "Credit setting\n", "Dial system",
+	"Edit a node\n", "Initiate Anytime Net Session", "Local list\n",
+	"Net privileges\n", "Priority Mail\n", "Request File\n",
+	"Send File\n", "Until Done Net Sessions", "View net list\n", "X\beXit",
+#ifdef ZNEEDED
+"Z",
+#endif
+	""
+    };
+
+    /* If we don't net, don't allow this. */
+    if (!cfg.BoolFlags.netParticipant) {
+	SysopInfoReport(NO_MENU, "Networking is disabled on this installation.\n ");
+	return ;
+    }
+
+    id = RegisterSysopMenu("netopt.mnu", NetMiscOpts, " Net Menu ", 0);
+    do {
+	outFlag = OUTOK;
+	RegisterThisMenu("netopt.mnu", NetMiscOpts);
+	SysopMenuPrompt(id, "\n Net function: ");
+	switch (GetSysopMenuChar(id)) {
+	    case ERROR:
+	    case 'X':
+		CloseSysopMenu(id);
+		return;
+	    case 'P':
+		getList(AdminPriorityMail, "Systems and Priority Mail",
+							NAMESIZE, TRUE, 0);
+		break;
+	    case 'I':
+		ForceAnytime();
+		sprintf(work, "now %s.\n ", ForceNet ? "ON" : "OFF");
+		SysopInfoReport(id, work);
+		break;
+	    case 'R':   /* File requests */
+		SysopRequestString(id, "System", who, sizeof who, 0);
+		if (!ReqNodeName("", who, NULL, RNN_SYSMENU, &netBuf))
+		    break;
+		fileRequest();
+		break;
+	    case 'S':   /* File transmissions */
+		SysopRequestString(id, "System", who, sizeof who, 0);
+		if (!ReqNodeName("", who, NULL, RNN_SYSMENU, &netBuf))
+		    break;
+		getSendFiles(id, who);
+		break;
+	    case 'C':   /* Set users' LD credits */
+		if ((logNo = GetUser(who, &logTmp, TRUE)) == ERROR ||
+				logNo == cfg.MAXLOGTAB) break;
+		sprintf(work,
+			"Currently %d credits.  How many now", logTmp.credit);
+		logTmp.credit = (int) SysopGetNumber(id, work, 0l, 1000l);
+		sprintf(work, "Set to %d.", logTmp.credit);
+		SysopInfoReport(id, work);
+		if (loggedIn  &&  strCmpU(logBuf.lbname, who) == SAMESTRING)
+		    logBuf.credit = logTmp.credit;
+
+		putLog(&logTmp, logNo);
+		break;
+	    case 'D':   /* Primitive dial out ability.  Don't get excited */
+		if (!onConsole) break;
+		if (gotCarrier()) {	/* carrier already?  just jump in */
+		    CloseSysopMenu(id);
+		    interact(FALSE);
+		    id = RegisterSysopMenu("netopt.mnu", NetMiscOpts,
+							" Net Menu ", 0);
+		    break;
+		}
+		/* Get node to call, if none specified abort */
+		SysopRequestString(id, "System", who, sizeof who, 0);
+		if (!ReqNodeName("", who, NULL, RNN_ONCE | RNN_SYSMENU,&netBuf))
+		    break;
+
+		/* How many times should we try to call? */
+		if ((Redials = SysopGetNumber(id, "# of redial attempts", 0l,
+							65000l)) <= 0l)
+		    Redials = 1l;       /* allow empty C/R to generate 1. */
+
+		/* Modem should be disabled since we're in CONSOLE mode. */
+		id2 = SysopContinual(netBuf.netName, "Dialing ...", 50, 13);
+		EnableModem(FALSE);
+		for (; Redials > 0l; Redials--) {
+		    /* if successful call, start chattin'! */
+		    if (makeCall(FALSE, id2)) {
+			SysopCloseContinual(id2);
+			CloseSysopMenu(id);
+			mputChar(BELL);
+			interact(FALSE);
+			id = RegisterSysopMenu("netopt.mnu", NetMiscOpts,
+							" Net Menu ", 0);
+			break;
+		    }
+		    /* This handles an abort from kbd */
+		    if (KBReady()) {
+			getCh();
+			/* Hope this turns off modem */
+			outMod(' '); pause(2);
+			DisableModem(FALSE);
+			break;
+		    }
+		    /* printf("Failed\n"); */
+		    /* Let modem stabilize for a moment. */
+		    for (startTimer(WORK_TIMER);chkTimeSince(WORK_TIMER) < 3l; )
+			;
+		}
+		SysopCloseContinual(id2);
+		/*
+		 * If we don't have carrier disable the modem.  We have this
+		 * check in case sysop wants to perform download within
+		 * Citadel.
+		 */
+		if (!gotCarrier()) {
+		    DisableModem(FALSE);
+		    modStat = haveCarrier = FALSE;
+		}
+		break;
+	    case 'V':   /* View the net list. */
+		CloseSysopMenu(id);
+		doCR();
+		writeNet(TRUE, FALSE);
+		if (NeedSysopInpPrompt()) modIn();
+		id = RegisterSysopMenu("netopt.mnu", NetMiscOpts,
+							" Net Menu ", 0);
+		break;
+	    case 'L':
+		CloseSysopMenu(id);
+		writeNet(TRUE, TRUE);
+		if (NeedSysopInpPrompt()) modIn();
+		id = RegisterSysopMenu("netopt.mnu", NetMiscOpts,
+							" Net Menu ", 0);
+		break;
+	    case 'A':   /* Add a new node to the list */
+		addNetNode();
+		break;
+	    case 'E':   /* Edit a node that is on the list */
+		SysopRequestString(id, "Name of system to edit", who, sizeof who,0);
+		if (!ReqNodeName("", who, NULL, RNN_ONCE | RNN_DISPLAY |
+							RNN_SYSMENU, &netBuf))
+		    break;
+
+		CloseSysopMenu(id);
+		editNode();
+		id = RegisterSysopMenu("netopt.mnu", NetMiscOpts,
+							" Net Menu ", 0);
+		break;
+	    case 'N':   /* Give someone net privileges. */
+		NetPrivs(who);
+		break;
+	    case 'U':
+		id2 = SysopContinual(" Net Session ", "", 30, 4);
+		SysopContinualString(id2, "Member Net", work, 3, 0);
+		tmp.first = atoi(work);
+		if (tmp.first < 1 || tmp.first > MAX_NET - 1) {
+		    if (strlen(work) != 0)
+			SysopError(id2, "Illegal Member Net");
+		}
+		else {
+		    if (SearchList(&UntilNetSessions, &tmp) != NULL) {
+			SysopInfoReport(NO_MENU, "Net session deactivated.\n");
+			KillData(&UntilNetSessions, &tmp);
+		    }
+		    else {
+			SysopContinualString(id2, "Duration", work, 4, 0);
+			duration = atol(work);
+			if (duration < 1l)
+			    SysopError(id2, "Illegal Duration");
+			else
+			    AddData(&UntilNetSessions,MakeTwo(tmp.first,duration),
+								NULL, FALSE);
+		    }
+		}
+		SysopCloseContinual(id2);
+		break;
+#ifdef ZNEEDED
+	    case 'Z':
+		inNet = NORMAL_NET;
+		AddNetMsgs("tempmail.$$$", inMail, FALSE, MAILROOM, TRUE);
+		inNet = NON_NET;
+		break;
+#endif
+	}
+    } while (onLine());
+}
+
+/*
+ * NetPrivs()
+ *
+ * This will setup net privs for someone.
+ */
+void NetPrivs(label who)
+{
+    int logNo, result;
+    char work[50];
+
+    if ((logNo = GetUser(who, &logTmp, TRUE)) == ERROR) return;
+    if (logNo == cfg.MAXLOGTAB) {
+	result = DoAllQuestion("Give everyone net privs",
+					"Take away everyone's net privs");
+	if (result == ERROR) return;
+	for (logNo = 0; logNo < cfg.MAXLOGTAB; logNo++) {
+    	    getLog(&logTmp, logNo);
+    	    if (!onConsole) mPrintf(".");
+    	    if (logTmp.lbflags.L_INUSE && logTmp.lbflags.NET_PRIVS != result) {
+    		logTmp.lbflags.NET_PRIVS = result;
+    		putLog(&logTmp, logNo);
+	    }
+	}
+	return;
+    }
+    sprintf(work, "%s has %snet privileges\n ", who,
+				(logTmp.lbflags.NET_PRIVS) ? "no " : "");
+    if (!SysopGetYesNo(NO_MENU, work, confirm))   return;
+    logTmp.lbflags.NET_PRIVS = !logTmp.lbflags.NET_PRIVS;
+    if (strCmpU(logTmp.lbname, logBuf.lbname) == SAMESTRING)
+	logBuf.lbflags.NET_PRIVS = logTmp.lbflags.NET_PRIVS;
+
+    putLog(&logTmp, logNo);
 }
 
 static int SelectGetAllOption(char *name);
@@ -862,238 +1079,3 @@ static int SelectGetAllOption(char *name)
 	CloseSysopMenu(menu_id);
 	return retval;
 }
-
-/*
- * AddSharedRooms()
- *
- * This function allows the addition of shared rooms from node editing.
- */
-static int AddSharedRooms(char *data, int ShType)
-{
-    extern VirtualRoom *VRoomTab;
-    int roomslot;
-    RoomSearch arg;
-    SharedRoomData *room;
-    char virt = FALSE;
-
-    strcpy(arg.Room, data);
-    if (RoomRoutable(&arg)) {
-	SetMode(arg.room->room->mode, ShType);
-	arg.room->srd_flags |= SRD_DIRTY;
-	return TRUE;
-    }
-
-    if ((roomslot = FindVirtualRoom(data)) == ERROR) {
-	if ((roomslot = roomExists(data)) == ERROR) {
-	    SysopPrintf(GetListId, "No such room.\n");
-	    return TRUE;
-	}
-	else if (!roomTab[roomslot].rtflags.SHARED) {
-	    SysopPrintf(GetListId, "Room is not shared.\n");
-	    return TRUE;
-	}
-    }
-    else virt = TRUE;
-
-    room = NewSharedRoom();
-    room->room->srslot   = roomslot;
-    room->room->sr_flags = (virt) ? SR_VIRTUAL : 0;
-    room->room->lastPeon = VRoomTab[roomslot].vrLoLocal;
-    room->room->lastMess = (virt) ? VRoomTab[roomslot].vrLoLD : cfg.newest;
-    room->room->srgen    = (virt) ? 0 : roomTab[roomslot].rtgen + (unsigned) 0x8000;
-    room->room->netGen   = netBuf.nbGen;
-    room->room->netSlot  = thisNet;
-    SetMode(room->room->mode, ShType);
-
-    return TRUE;
-}
-
-/*
- * DelSharedRooms()
- *
- * This function kills the specified room sharing link, if it exists.
- */
-static int DelSharedRooms(char *data, int arg)
-{
-    RoomSearch search;
-
-    strcpy(search.Room, data);
-    if (!RoomRoutable(&search)) {
-	SysopPrintf(GetListId, "Not found\n");
-	return TRUE;
-    }
-    KillShared(search.room, thisNet, search.room->room->srslot, NULL);
-    return TRUE;
-}
-
-/*
- * KillTempFiles()
- *
- * This eliminates unneeded temp files for dead node.
- */
-static void KillTempFiles(int which)
-{
-    label    temp;
-    SYS_FILE temp2;
-
-    sprintf(temp, "%d.ml", which);
-    makeSysName(temp2, temp, &cfg.netArea);
-    unlink(temp2);
-    netBuf.nbflags.normal_mail = FALSE;
-    sprintf(temp, "%d.rfl", which);
-    makeSysName(temp2, temp, &cfg.netArea);
-    unlink(temp2);
-    netBuf.nbflags.room_files = FALSE;
-    sprintf(temp, "%d.sfl", which);
-    makeSysName(temp2, temp, &cfg.netArea);
-    unlink(temp2);
-    netBuf.nbflags.send_files = FALSE;
-    sprintf(temp, "%d.vtx", which);
-    makeSysName(temp2, temp, &cfg.netArea);
-    unlink(temp2);
-    InitVNode(thisNet);
-}
-
-/*
- * NodeValues()
- *
- * This function prints out the values for the current node.
- */
-static void NodeValues(MenuId id)
-{
-    int	i, first;
-    MULTI_NET_DATA h;
-
-    sprintf(msgBuf.mbtext, "\n Node #%d: %s", thisNet, netBuf.netName);
-    if (strlen(netBuf.nbShort))
-	sprintf(lbyte(msgBuf.mbtext), " (%s)", netBuf.nbShort);
-
-    sprintf(lbyte(msgBuf.mbtext), "\n Id: %s (%slocal @ %s)\n ",
-				netBuf.netId,
-				netBuf.nbflags.local ? "" : "non",
-				SupportedBauds[netBuf.baudCode]);
-
-    if (netBuf.nbflags.ExternalDialer)
-	sprintf(lbyte(msgBuf.mbtext), "External Dialer Information: %s\n ",
-								netBuf.access);
-
-    if (strlen(netBuf.access) != 0 && !netBuf.nbflags.ExternalDialer)
-	sprintf(lbyte(msgBuf.mbtext), "Access: %s\n ", netBuf.access);
-
-    if (netBuf.nbflags.spine)
-	sprintf(lbyte(msgBuf.mbtext), "We are a spine\n ");
-    else if (netBuf.nbflags.is_spine)
-	sprintf(lbyte(msgBuf.mbtext), "This system is a spine\n ");
-
-    if (netBuf.nbflags.OtherNet)
-	sprintf(lbyte(msgBuf.mbtext), "OtherNet system.\n ");
-
-    if (netBuf.nbflags.normal_mail || netBuf.nbflags.HasRouted)
-	sprintf(lbyte(msgBuf.mbtext), "Outgoing Mail>.\n ");
-
-    if (DomainFlags[thisNet])
-	sprintf(lbyte(msgBuf.mbtext), "Outgoing DomainMail.\n ");
-
-    if (AnyRouted(thisNet))
-	sprintf(lbyte(msgBuf.mbtext), "Mail routed via this system.\n ");
-
-    if (netBuf.nbflags.room_files)
-	sprintf(lbyte(msgBuf.mbtext), "File requests outstanding.\n ");
-
-    if (netBuf.nbflags.send_files)
-	sprintf(lbyte(msgBuf.mbtext), "Files to be sent.\n ");
-
-    if (netBuf.nbflags.MassTransfer)
-	sprintf(lbyte(msgBuf.mbtext), "Fast Transfers on (using %s).\n ",
-				GetCompEnglish(netBuf.nbCompress));
-
-    if (netBuf.nbflags.Login)
-	sprintf(lbyte(msgBuf.mbtext), "Wait for Room Prompt on call\n ");
-
-    if (netBuf.MemberNets != 0l) {
-	sprintf(lbyte(msgBuf.mbtext), "Assigned to net(s) ");
-	for (i = 0, first = 1, h = 1l; i < MAX_NET; i++) {
-	    if (h & netBuf.MemberNets) {
-		if (!first)
-		    sprintf(lbyte(msgBuf.mbtext), ", ");
-		else first = FALSE;
-
-		/* Yes - +1. Number the bits starting with 1 */
-		sprintf(lbyte(msgBuf.mbtext), "%d", i+1);
-	    }
-	    h <<= 1;
-	}
-	sprintf(lbyte(msgBuf.mbtext), ".\n ");
-    }
-    else sprintf(lbyte(msgBuf.mbtext), "System is disabled.\n ");
-
-    sprintf(lbyte(msgBuf.mbtext), "Last connected: %s\n",
-					AbsToReadable(netBuf.nbLastConnect));
-    SysopDisplayInfo(id, msgBuf.mbtext, " Values ");
-}
-
-/*
- * fileRequest()
- *
- * This handles the administration of requesting files from another system.
- */
-static void fileRequest()
-{
-    struct fl_req file_data;
-    label    data;
-    char     loc[100], *c, *work;
-    SYS_FILE fn;
-    char     abort;
-    FILE     *temp;
-    int      place;
-    extern char *APPEND_ANY;
-    char     ambiguous, again;
-    MenuId   id;
-
-    place = thisNet;    /* again, a kludge to be killed later */
-
-    id = SysopContinual("", "", 75, 10);
-    sprintf(loc, "\nname of room on %s that has desired file", netBuf.netName);
-    SysopContinualString(id, loc, file_data.room, NAMESIZE, 0);
-    if (strlen(file_data.room) == 0) {
-	SysopCloseContinual(id);
-	return;
-    }
-
-    SysopContinualString(id, "\nthe file(s)'s name", loc, sizeof loc, 0);
-    if (strlen(loc) == 0) {
-	SysopCloseContinual(id);
-	return;
-    }
-
-    ambiguous = !(strchr(loc, '*') == NULL && strchr(loc, '?') == NULL &&
-		strchr(loc, ' ') == NULL);
-
-    abort = !netGetAreaV2(id, loc, &file_data, ambiguous);
-
-    if (!abort) {
-	sprintf(data, "%d.rfl", place);
-	makeSysName(fn, data, &cfg.netArea);
-	if ((temp = fopen(fn, APPEND_ANY)) == NULL) {
-	    SysopPrintf(id, "Couldn't append to '%s'????", fn);
-	}
-	else {
-	    work = loc;
-
-	    do {
-		again = (c = strchr(work, ' ')) != NULL;
-		if (again) *c = 0;
-		strcpy(file_data.roomfile, work);
-		if (ambiguous) strcpy(file_data.filename, work);
-		fwrite(&file_data, sizeof (file_data), 1, temp);
-		if (again) work = c + 1;
-	    } while (again);
-
-	    netBuf.nbflags.room_files = TRUE;
-	    putNet(place, &netBuf);
-	    fclose(temp);
-	}
-    }
-    SysopCloseContinual(id);
-}
-

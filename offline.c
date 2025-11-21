@@ -54,41 +54,12 @@ extern char	   *LCHeld, *WRITE_ANY, *WRITE_TEXT;
 extern char	   PrintBanner;
 extern char	   *R_SH_MARK, *LOC_NET, *NON_LOC_NET;
 
-void *FindOfflineReader(), *EatOfflineReader(char *line);
-SListBase OfflineReaderDown = { NULL, FindOfflineReader, NULL, NULL, EatOfflineReader };
-SListBase OfflineReaderUp = { NULL, FindOfflineReader, NULL, NULL, NULL };
-
-char *Site;
-char *Basename;
-/*
- * OffLineInit()
- *
- * This function initializes the data structure that knows about the offline
- * reading support for this installation.
- */
-void OffLineInit()
-{
-	SYS_FILE fn;
-	FILE *fd;
-
-	makeSysName(fn, OFF_DEFS, &cfg.roomArea);
-	if ((fd = fopen(fn, READ_TEXT)) != NULL) {
-		GetAString(msgBuf.mbtext, 500, fd);
-		Site = strdup(msgBuf.mbtext);
-		GetAString(msgBuf.mbtext, 500, fd);
-		Basename = strdup(msgBuf.mbtext);
-		MakeList(&OfflineReaderDown, "", fd);
-		fclose(fd);
-	}
-}
-
 /*
  * FindOfflineReader()
  *
  * This function helps find an offline reader in a list.
  */
-static void *FindOfflineReader(OfflineReader *data, char *sel)
-{
+static void *FindOfflineReader(OfflineReader *data, char *sel){
 	if ((*sel) == data->Selector) return data;
 	return NULL;
 }
@@ -102,8 +73,7 @@ static void *FindOfflineReader(OfflineReader *data, char *sel)
  * one list.  This function makes its decision based on the t | r which is the
  * first token of the offline reader configuration.
  */
-static void *EatOfflineReader(char *line)
-{
+static void *EatOfflineReader(char *line){
 	char *tok, Down, work[50];
 	OfflineReader *d;
 
@@ -150,6 +120,42 @@ static void *EatOfflineReader(char *line)
 	return NULL;
 }
 
+SListBase OfflineReaderDown = { NULL, FindOfflineReader, NULL, NULL, EatOfflineReader };
+SListBase OfflineReaderUp = { NULL, FindOfflineReader, NULL, NULL, NULL };
+
+char *Site;
+char *Basename;
+/*
+ * OffLineInit()
+ *
+ * This function initializes the data structure that knows about the offline
+ * reading support for this installation.
+ */
+void OffLineInit()
+{
+	SYS_FILE fn;
+	FILE *fd;
+
+	makeSysName(fn, OFF_DEFS, &cfg.roomArea);
+	if ((fd = fopen(fn, READ_TEXT)) != NULL) {
+		GetAString(msgBuf.mbtext, 500, fd);
+		Site = strdup(msgBuf.mbtext);
+		GetAString(msgBuf.mbtext, 500, fd);
+		Basename = strdup(msgBuf.mbtext);
+		MakeList(&OfflineReaderDown, "", fd);
+		fclose(fd);
+	}
+}
+
+/*
+ * AddOfflineReaderOpts()
+ *
+ * This function does the actual work of adding an option to a menu list.
+ */
+static void AddOfflineReaderOpts(OfflineReader *d, char **TheOpts){
+	ExtraOption(TheOpts, d->Display);
+}
+
 /*
  * AddOfflineReaderOptions()
  *
@@ -160,17 +166,7 @@ void AddOfflineReaderOptions(char **Opts, char upload)
 	void AddOfflineReaderOpts();
 
 	RunListA(upload ? &OfflineReaderUp : &OfflineReaderDown,
-			AddOfflineReaderOpts, (void *) Opts);
-}
-
-/*
- * AddOfflineReaderOpts()
- *
- * This function does the actual work of adding an option to a menu list.
- */
-static void AddOfflineReaderOpts(OfflineReader *d, char **TheOpts)
-{
-	ExtraOption(TheOpts, d->Display);
+			(void(*)(void*,void*))AddOfflineReaderOpts, (void *) Opts);
 }
 
 /*
@@ -367,20 +363,30 @@ void AddOffLineMsg()
 }
 
 /*
+ * ListReader()
+ *
+ * This function makes a readable version of an offline reader for display
+ * by the help system.
+ */
+static void ListReader(OfflineReader *Reader, char *target){
+	sprintf(lbyte(target), "<%c>%s, ", Reader->Selector,
+			(Reader->Selector == Reader->Name[0]) ?
+			Reader->Name + 1 : Reader->Name);
+}
+
+/*
  * OfflineUp()
  *
  * This function lists the offline readers support available for uploads.
  */
-void OfflineUp(char *target)
-{
+void OfflineUp(char *target){
 	char *c;
-	void ListReader();
 
 	target[0] = 0;
 	if (GetFirst(&OfflineReaderUp) == NULL)
 		strcpy(target, "None.");
 	else {
-		RunListA(&OfflineReaderUp, ListReader, target);
+		RunListA(&OfflineReaderUp, (void(*)(void*,void*))ListReader, target);
 		if ((c = strrchr(target, ',')) != NULL)
 			strcpy(c, ".");
 	}
@@ -391,31 +397,15 @@ void OfflineUp(char *target)
  *
  * This function lists the offline readers support available for downloads.
  */
-void OfflineDown(char *target)
-{
+void OfflineDown(char *target){
 	char *c;
-	void ListReader();
 
 	target[0] = 0;
 	if (GetFirst(&OfflineReaderDown) == NULL)
 		strcpy(target, "None.");
 	else {
-		RunListA(&OfflineReaderDown, ListReader, target);
+		RunListA(&OfflineReaderDown, (void(*)(void*,void*))ListReader, target);
 		if ((c = strrchr(target, ',')) != NULL)
 			strcpy(c, ".");
 	}
 }
-
-/*
- * ListReader()
- *
- * This function makes a readable version of an offline reader for display
- * by the help system.
- */
-static void ListReader(OfflineReader *Reader, char *target)
-{
-	sprintf(lbyte(target), "<%c>%s, ", Reader->Selector,
-			(Reader->Selector == Reader->Name[0]) ?
-			Reader->Name + 1 : Reader->Name);
-}
-

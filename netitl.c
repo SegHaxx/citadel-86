@@ -160,6 +160,22 @@ void ITL_optimize(char both)
 }
 
 /*
+ * increment()
+ *
+ * This function is used to place incoming information into an internal buffer
+ * for later processing.  It is used exclusively in calls to Reception.  See
+ * ITL_Receive().
+ */
+static int increment(int c){
+    RecBuf[InternalCounter++] = c;
+    if (InternalCounter > SECTSIZE+2) {
+	killConnection("increment");
+	return FALSE;
+    }
+    return TRUE;
+}
+
+/*
  * ITL_Receive()
  *
  * This sets up the system to receive an ITL transmission.  Please note how
@@ -345,23 +361,6 @@ int sendITLchar(int c)
 }
 
 /*
- * increment()
- *
- * This function is used to place incoming information into an internal buffer
- * for later processing.  It is used exclusively in calls to Reception.  See
- * ITL_Receive().
- */
-static int increment(int c)
-{
-    RecBuf[InternalCounter++] = c;
-    if (InternalCounter > SECTSIZE+2) {
-	killConnection("increment");
-	return FALSE;
-    }
-    return TRUE;
-}
-
-/*
  * ITL_SendMessages()
  *
  * This function sets up to send messages to the receiver.  It returns
@@ -396,6 +395,18 @@ void ITL_StopSendMessages()
 }
 
 /*
+ * CloseEncoded()
+ *
+ * This stops encoding before closing a file, and is passed to ITL_Receive().
+ * If this is NOT used, then the flushing of the compaction buffers will not
+ * occur and data will be lost.
+ */
+static int CloseEncoded(FILE *f){
+    StopEncode();
+    return fclose(f);
+}
+
+/*
  * ITL_StartRecMsgs()
  *
  * This function receives messages from the other side.  Inputs:
@@ -408,10 +419,8 @@ void ITL_StopSendMessages()
  *   this is NULL.
  */
 char ITL_StartRecMsgs(char *FileNm, char ReplyFirst, char OpenIt,
-					int (*OverRide)(int c))
-{
+					int (*OverRide)(int c)){
     char toReturn;
-    int  CloseEncoded(FILE *f);
     int  (*CloseFn)(FILE *f) = fclose;
 
     if (OverRide == Encode) CloseFn = CloseEncoded;
@@ -427,17 +436,4 @@ char ITL_StartRecMsgs(char *FileNm, char ReplyFirst, char OpenIt,
     if (MsgIn == Decode) StopDecode();
 
     return toReturn;
-}
-
-/*
- * CloseEncoded()
- *
- * This stops encoding before closing a file, and is passed to ITL_Receive().
- * If this is NOT used, then the flushing of the compaction buffers will not
- * occur and data will be lost.
- */
-static int CloseEncoded(FILE *f)
-{
-    StopEncode();
-    return fclose(f);
 }

@@ -24,13 +24,28 @@
  */
 
 /*
- * Arch_base
+ * NtoStrInit()
  *
- * This list contains the list of archive files for archive rooms.  The
- * information consists of the room slot number, the string representing
- * the filename to place messages in, and the max size of the file.
+ * This is a utility function to generate temporary or permanent data nodes
+ * for searching or adding to Archive-type lists.
  */
-SListBase  Arch_base = { NULL, ChkNtoStr, NULL, FreeNtoStr, EatArchRec };
+void *NtoStrInit(int num, char *str, int num2, char needstatic)
+{
+    NumToString *temp;
+    static NumToString t = { 0, NULL };
+
+    if (needstatic) {
+        temp = &t;
+        if (temp->string != NULL) free(temp->string);
+    }
+    else
+        temp = (NumToString *) GetDynamic(sizeof *temp);
+
+    temp->num  = num;
+    temp->num2 = num2;
+    temp->string = strdup(str);
+    return (void *) temp;
+}
 
 extern FILE *upfd;
 /*
@@ -69,31 +84,43 @@ void *EatArchRec(char *line)
     return NtoStrInit(atoi(line), s+1, atoi(c), FALSE);
 }
 
+static char ReturnNum2 = FALSE;
+
 /*
- * NtoStrInit()
+ * ChkNtoStr()
  *
- * This is a utility function to generate temporary or permanent data nodes
- * for searching or adding to Archive-type lists.
+ * This function is used to search lists which use the NumToString lists.  It
+ * searches using the numerical value as a key.
  */
-void *NtoStrInit(int num, char *str, int num2, char needstatic)
+void* ChkNtoStr(NumToString *d1, NumToString *d2)
 {
-    NumToString *temp;
-    static NumToString t = { 0, NULL };
-
-    if (needstatic) {
-        temp = &t;
-        if (temp->string != NULL) free(temp->string);
-    }
-    else
-        temp = (NumToString *) GetDynamic(sizeof *temp);
-
-    temp->num  = num;
-    temp->num2 = num2;
-    temp->string = strdup(str);
-    return (void *) temp;
+	if (d1->num == d2->num)
+		return (ReturnNum2) ? (void *) &d1->num2 : (void *) d1->string;
+	return NULL;
 }
 
-static char ReturnNum2 = FALSE;
+/*
+ * FreeNtoStr()
+ *
+ * This function frees a general use NumToString node.  We use this rather
+ * than free because the field string is also dynamically allocated.
+ */
+void FreeNtoStr(NumToString *d)
+{
+    free(d->string);
+    free(d);
+}
+
+/*
+ * Arch_base
+ *
+ * This list contains the list of archive files for archive rooms.  The
+ * information consists of the room slot number, the string representing
+ * the filename to place messages in, and the max size of the file.
+ */
+SListBase  Arch_base = { NULL, ChkNtoStr, NULL, FreeNtoStr, EatArchRec };
+
+
 /*
  * GetArchSize()
  *
@@ -110,19 +137,6 @@ int GetArchSize(int num)
     ReturnNum2 = FALSE;
     if (x == NULL) return 0;
     return (int) *x;
-}
-
-/*
- * ChkNtoStr()
- *
- * This function is used to search lists which use the NumToString lists.  It
- * searches using the numerical value as a key.
- */
-void *ChkNtoStr(NumToString *d1, NumToString *d2)
-{
-	if (d1->num == d2->num)
-		return (ReturnNum2) ? (void *) &d1->num2 : (void *) d1->string;
-	return NULL;
 }
 
 /*
@@ -172,18 +186,6 @@ void WrtNtoStr(NumToString *d)
 void WrtArchRec(NumToString *d)
 {
     fprintf(upfd, "%d %s %d\n", d->num, d->string, d->num2);
-}
-
-/*
- * FreeNtoStr()
- *
- * This function frees a general use NumToString node.  We use this rather
- * than free because the field string is also dynamically allocated.
- */
-void FreeNtoStr(NumToString *d)
-{
-    free(d->string);
-    free(d);
 }
 
 /*

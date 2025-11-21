@@ -125,12 +125,73 @@ void system_called()
 }
 
 /*
+ * reqReversal()
+ *
+ * This handles the role reversal command.
+ */
+static void reqReversal(struct cmd_data *cmds, char reversed){
+	if (cfg.BoolFlags.debug) splitF(netLog, "Role reversal\n");
+
+	if (reversed) {
+		reply(BAD, "Synch error on Reversal!");
+		return ;
+	}
+
+	reply(GOOD, "");
+	if (callSlot == ERROR)      /* Forces a "null" role reversal	*/
+		zero_struct(netBuf.nbflags);
+
+	if (strcmp(cmds->fields[0], "interrupted") == 0) {
+		sendStuff(TRUE, PosId, FALSE);
+	}
+	else sendStuff(TRUE, PosId, TRUE);
+}
+
+/*
+ * reqCheckMail()
+ *
+ * This checks incoming mail and does negative acks where appropriate.
+ */
+static void reqCheckMail(){
+    splitF(netLog, "checking Mail\n");
+
+    if (!processMail) {
+	reply(BAD, "No mail to check!");
+	return ;
+    }
+
+    reply(GOOD, "");
+
+    if (ITL_Send(STARTUP)) {
+	AddNetMsgs("tempmail.$$$", targetCheck, FALSE, MAILROOM, TRUE);
+	sendITLchar(NO_ERROR);
+	ITL_Send(FINISH);
+    }
+}
+
+/*
+ * getMail()
+ *
+ * This function Grabs mail from caller.
+ */
+static void getMail(){
+	SYS_FILE tempNm;
+
+	splitF(netLog, "Receiving Mail =>");
+	makeSysName(tempNm, "tempmail.$$$", &cfg.netArea);
+	if (ITL_StartRecMsgs(tempNm, TRUE, TRUE, NULL) == ITL_SUCCESS) {
+		processMail = TRUE;
+		splitF(netLog, " %ld bytes\n", TransferTotal);
+	}
+	else	splitF(netLog, " Failed\n");
+}
+
+/*
  * rcvStuff()
  *
  * This function manages receiving stuff.
  */
-void rcvStuff(char reversed)
-{
+void rcvStuff(char reversed){
     label	    tempNm;
     struct cmd_data cmds;
 
@@ -182,12 +243,26 @@ void netPwd(struct cmd_data *cmds)
 }
 
 /*
+ * doNetRooms()
+ *
+ * This function integrates temporary files containing incoming messages into
+ * the data base.
+ */
+static void doNetRooms(){
+    SYS_FILE fileNm;
+    int IntegrateRoom(SharedRoomData *room, int system, int roomslot, void *d);
+
+    EachSharedRoom(thisNet, IntegrateRoom, NULL, NULL);
+    makeSysName(fileNm, RECOVERY_FILE, &cfg.netArea);
+    unlink(fileNm);
+}
+
+/*
  * doResults()
  *
  * This function processes the results of receiving thingies and such.
  */
-void doResults()
-{
+void doResults(){
 	SYS_FILE tempNm;
 	extern SListBase DomainMap;
 	void HandleExistingDomain();
@@ -237,15 +312,23 @@ void doResults()
 }
 
 /*
+ * NotSentYet()
+ *
+ * Turns off the sent flag.
+ */
+static int NotSentYet(SharedRoomData *room, int system, int roomslot, void *d){
+    room->room->sr_flags &= ~SR_SENT;
+    return TRUE;
+}
+
+/*
  * getId()
  *
  * This gets nodeId and nodeName from caller.
  */
-void getId()
-{
+void getId(){
 	extern SListBase	SystemsCalled;
 	extern SListBase	Shutup;
-	int NotSentYet(SharedRoomData *room, int system, int roomslot, void *d);
 	char                    *secRunner;
 #ifdef NEED_THIS_DATA
 	SYS_FILE                fn;
@@ -292,17 +375,6 @@ void getId()
 
 	EachSharedRoom(thisNet, NotSentYet, NotSentYet, NULL);
 	splitF(netLog, "%s (%s) @ %ld\n", callerName, callerId, BaudRate);
-}
-
-/*
- * NotSentYet()
- *
- * Turns off the sent flag.
- */
-static int NotSentYet(SharedRoomData *room, int system, int roomslot, void *d)
-{
-    room->room->sr_flags &= ~SR_SENT;
-    return TRUE;
 }
 
 /*
@@ -365,53 +437,6 @@ void reply(char state, char *reason)
 }
 
 /*
- * reqReversal()
- *
- * This handles the role reversal command.
- */
-static void reqReversal(struct cmd_data *cmds, char reversed)
-{
-	if (cfg.BoolFlags.debug) splitF(netLog, "Role reversal\n");
-
-	if (reversed) {
-		reply(BAD, "Synch error on Reversal!");
-		return ;
-	}
-
-	reply(GOOD, "");
-	if (callSlot == ERROR)      /* Forces a "null" role reversal	*/
-		zero_struct(netBuf.nbflags);
-
-	if (strcmp(cmds->fields[0], "interrupted") == 0) {
-		sendStuff(TRUE, PosId, FALSE);
-	}
-	else sendStuff(TRUE, PosId, TRUE);
-}
-
-/*
- * reqCheckMail()
- *
- * This checks incoming mail and does negative acks where appropriate.
- */
-static void reqCheckMail()
-{
-    splitF(netLog, "checking Mail\n");
-
-    if (!processMail) {
-	reply(BAD, "No mail to check!");
-	return ;
-    }
-
-    reply(GOOD, "");
-
-    if (ITL_Send(STARTUP)) {
-	AddNetMsgs("tempmail.$$$", targetCheck, FALSE, MAILROOM, TRUE);
-	sendITLchar(NO_ERROR);
-	ITL_Send(FINISH);
-    }
-}
-
-/*
  * targetCheck()
  *
  * This checks for existence of recipients.
@@ -456,22 +481,6 @@ void CheckRecipient(char *d)
 	NetPrintf(sendITLchar, "%s", msgBuf.mbauth);
 	NetPrintf(sendITLchar, "%s", d);
 	NetPrintf(sendITLchar, "%s @ %s", msgBuf.mbdate, msgBuf.mbtime);
-}
-
-/*
- * doNetRooms()
- *
- * This function integrates temporary files containing incoming messages into
- * the data base.
- */
-static void doNetRooms()
-{
-    SYS_FILE fileNm;
-    int IntegrateRoom(SharedRoomData *room, int system, int roomslot, void *d);
-
-    EachSharedRoom(thisNet, IntegrateRoom, NULL, NULL);
-    makeSysName(fileNm, RECOVERY_FILE, &cfg.netArea);
-    unlink(fileNm);
 }
 
 /*
@@ -524,24 +533,6 @@ void ReadNetRoomFile(SharedRoom *room, char *fn)
     FinVortexing();
 
     AssignAddress = NULL;
-}
-
-/*
- * getMail()
- *
- * This function Grabs mail from caller.
- */
-static void getMail()
-{
-	SYS_FILE tempNm;
-
-	splitF(netLog, "Receiving Mail =>");
-	makeSysName(tempNm, "tempmail.$$$", &cfg.netArea);
-	if (ITL_StartRecMsgs(tempNm, TRUE, TRUE, NULL) == ITL_SUCCESS) {
-		processMail = TRUE;
-		splitF(netLog, " %ld bytes\n", TransferTotal);
-	}
-	else	splitF(netLog, " Failed\n");
 }
 
 /*

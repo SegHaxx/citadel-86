@@ -18,7 +18,7 @@
 #define TIMER_FUNCTIONS_NEEDED
 
 #include "ctdl.h"
-#include "sys\stat.h"
+#include "sys/stat.h"
 #include "ctype.h"
 #include "time.h"
 
@@ -222,7 +222,9 @@ int getCh()
 int c;
 
 c = KeyStroke();
+#ifdef __MSDOS__
 if (c == F1_KEY) return 0;
+#endif
 return c;
 #endif
 }

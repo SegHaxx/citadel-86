@@ -188,12 +188,6 @@ static int time_table[] = { 0, 1, 4, 15 } ;
 
 long ByteCount;
 
-/*
- * External protocol administration
- */
-void *EatProtocol(char *line), *FindProtocol();
-SListBase ExtProtocols = { NULL, FindProtocol, NULL, NULL, EatProtocol };
-
 extern MessageBuffer   msgBuf;	/* Message buffer	*/
 extern CONFIG    cfg;		/* Configuration variables	*/
 extern logBuffer logBuf;	/* Log buffer of a person	*/
@@ -1839,18 +1833,6 @@ void DumpToFile(int LastReceived, int BufSize, CRC_TYPE tc, CRC_TYPE oc)
  * EXTERNAL PROTOCOLS ADMINISTRATION
  */
 static int  ExCount = 4;
-/*
- * InitProtocols()
- *
- * This function initializes external protocols.
- */
-void InitProtocols()
-{
-    SYS_FILE fn;
-
-    makeSysName(fn, "ctdlprot.sys", &cfg.roomArea);
-    MakeList(&ExtProtocols, fn, NULL);
-}
 
 /*
  * EatProtocol()
@@ -1943,7 +1925,50 @@ static void *FindProtocol(PROTOCOL *d, int *val)
     return NULL;
 }
 
+/*
+ * External protocol administration
+ */
+SListBase ExtProtocols = { NULL, FindProtocol, NULL, NULL, EatProtocol };
+
+/*
+ * InitProtocols()
+ *
+ * This function initializes external protocols.
+ */
+void InitProtocols()
+{
+    SYS_FILE fn;
+
+    makeSysName(fn, "ctdlprot.sys", &cfg.roomArea);
+    MakeList(&ExtProtocols, fn, NULL);
+}
+
 static char GetSizes = FALSE;
+/*
+ * AddName()
+ *
+ * This function is used in conjunction with wildCard to generate a list
+ * of names, optionally with filesizes in parenthesis 4/line.  This is used
+ * to generate a command line or a report in FILELOG.SYS.
+ */
+static void AddName(DirEntry *file)
+{
+    if (strLen(msgBuf.mbtext) > MAXTEXT - 200) {
+	if (GetSizes)
+	    strcat(msgBuf.mbtext, ".");
+    }
+    else {
+	sprintf(lbyte(msgBuf.mbtext), " %s", file->unambig);
+	if (GetSizes) {
+	    sprintf(lbyte(msgBuf.mbtext), " (%ld)", file->FileSize);
+	    if (++ExCount == 4) {
+		strcat(msgBuf.mbtext, "\n   ");
+		ExCount = 0;
+	    }
+	}
+    }
+}
+
 /*
  * ExternalProtocol()
  *
@@ -2041,14 +2066,6 @@ int FindProtocolCode(int c, char upload)
     return Prot->ProtVal;
 }
 
-PROTOCOL *FindProtocolByName(char *name, char upload)
-{
-    void *FindExtByName();
-
-    IsUpload = upload;
-    return AltSearchList(&ExtProtocols, FindExtByName, name);
-}
-
 /*
  * FindExtByName()
  *
@@ -2062,6 +2079,11 @@ static void *FindExtByName(PROTOCOL *d, char *name)
 
     if (strCmpU(d->Name, name) == SAMESTRING) return d;
     return NULL;
+}
+
+PROTOCOL *FindProtocolByName(char *name, char upload){
+    IsUpload = upload;
+    return AltSearchList(&ExtProtocols, FindExtByName, name);
 }
 
 /*
@@ -2116,31 +2138,40 @@ int EatExtMessage(int protocol)
 }
 
 /*
- * AddName()
+ * ListNames()
  *
- * This function is used in conjunction with wildCard to generate a list
- * of names, optionally with filesizes in parenthesis 4/line.  This is used
- * to generate a command line or a report in FILELOG.SYS.
+ * This function helps build the list of protocols available.
  */
-static void AddName(DirEntry *file)
+static void ListNames(PROTOCOL *d, char *MsgText)
 {
-    if (strLen(msgBuf.mbtext) > MAXTEXT - 200) {
-	if (GetSizes)
-	    strcat(msgBuf.mbtext, ".");
-    }
-    else {
-	sprintf(lbyte(msgBuf.mbtext), " %s", file->unambig);
-	if (GetSizes) {
-	    sprintf(lbyte(msgBuf.mbtext), " (%ld)", file->FileSize);
-	    if (++ExCount == 4) {
-		strcat(msgBuf.mbtext, "\n   ");
-		ExCount = 0;
-	    }
-	}
+    char *c;
+
+    if (((IsUpload && (d->Flags & PROTO_RECEIVE)) ||
+		(!IsUpload && (d->Flags & PROTO_SEND))) &&
+		(d->Flags & PROTO_USER)) {
+	c = lbyte(MsgText);
+	sprintf(c, "<%c>%s, ", d->Selector, (d->Selector == d->Name[0]) ?
+					d->Name + 1 : d->Name);
     }
 }
 
-void EnglishWork(char *target, char Ups);
+/*
+ * EnglishWork()
+ *
+ * This function does the real work of generating names.
+ */
+static void EnglishWork(char *target, char Ups){
+    char *c;
+
+    target[0] = 0;
+    IsUpload = Ups;
+    RunListA(&ExtProtocols, (void(*)(void*,void*))ListNames, (void *) target);
+    if ((c = strrchr(target, ',')) == NULL)
+	strcpy(target, "None.");
+    else
+	strcpy(c, ".");
+}
+
 /*
  * UpProtsEnglish()
  *
@@ -2161,41 +2192,4 @@ void UpProtsEnglish(char *target)
 void DownProtsEnglish(char *target)
 {
     EnglishWork(target, FALSE);
-}
-
-/*
- * EnglishWork()
- *
- * This function does the real work of generating names.
- */
-static void EnglishWork(char *target, char Ups)
-{
-    void ListNames();
-    char *c;
-
-    target[0] = 0;
-    IsUpload = Ups;
-    RunListA(&ExtProtocols, ListNames, (void *) target);
-    if ((c = strrchr(target, ',')) == NULL)
-	strcpy(target, "None.");
-    else
-	strcpy(c, ".");
-}
-
-/*
- * ListNames()
- *
- * This function helps build the list of protocols available.
- */
-static void ListNames(PROTOCOL *d, char *MsgText)
-{
-    char *c;
-
-    if (((IsUpload && (d->Flags & PROTO_RECEIVE)) ||
-		(!IsUpload && (d->Flags & PROTO_SEND))) &&
-		(d->Flags & PROTO_USER)) {
-	c = lbyte(MsgText);
-	sprintf(c, "<%c>%s, ", d->Selector, (d->Selector == d->Name[0]) ?
-					d->Name + 1 : d->Name);
-    }
 }

@@ -10,6 +10,8 @@
 #include "ctdl.h"
 #include "2ndfmt.h"
 
+#include <ctype.h>
+
 /*
  *				history
  *
@@ -58,10 +60,8 @@
 /*
  * Some useful static functions.
  */
-void DomainLog(char *str);
 void *EatCosts(char *line);
 int SetUpCallOut(char *DName);
-int CallOutWork(char *DName);
 
 /*
  * Required Global Variables
@@ -237,6 +237,27 @@ DomainDir *GetDomain(char *DName, char create)
 }
 
 /*
+ * DomainLog()
+ *
+ * This writes out a message to the domain log.
+ */
+static void DomainLog(char *str)
+{
+    SYS_FILE name;
+    char work[200];
+    extern SListBase Errors;
+
+    sprintf(work, "(%s %s) %s", formDate(), Current_Time(), str);
+    makeSysName(name, "domain.log", &cfg.domainArea);
+    CallMsg(name, work);
+    if (inNet == NON_NET) {
+	AddData(&Errors, strdup(str), NULL, FALSE);
+    }
+    else
+	netResult(str);		/* netResult() will add time/date stuff */
+}
+
+/*
  * DomainFileAddResult()
  *
  * This function handles the result of a domain file addition.  This is paired
@@ -282,7 +303,20 @@ void DomainFileAddResult(char *DName, label system, label NodeId, char result)
     UpdateMap();
 }
 
-void KillDomain();
+/*
+ * KillDomain()
+ *
+ * Kills a domain from DomainMap.
+ */
+static void KillDomain(int *MapDir)
+{
+    extern char CheckNumber;
+
+    CheckNumber = TRUE;
+    KillData(&DomainMap, MapDir);	/* KABOOM! */
+    CheckNumber = FALSE;
+}
+
 static SListBase KillDomains = { NULL, NULL, NULL, KillDomain, NULL };
 static char Change;
 /*
@@ -356,43 +390,6 @@ void DomainRationalize(DomainDir *data)
 }
 
 /*
- * KillDomain()
- *
- * Kills a domain from DomainMap.
- */
-static void KillDomain(int *MapDir)
-{
-    extern char CheckNumber;
-
-    CheckNumber = TRUE;
-    KillData(&DomainMap, MapDir);	/* KABOOM! */
-    CheckNumber = FALSE;
-}
-
-/*
- * SetUpCallOut()
- *
- * This is responsible for discovering what system should be called for
- * delivering mail to the designated domain.  It returns the index of the
- * node to receive the domain mail (whether final destination or simply a
- * transshipper).  If we serve the domain then return Error.
- *
- * NB: This is an interface function to the routines which actually handle
- * setting the proper call out flags and returning the proper index.  The
- * function itself initializes the data structure for the search (by
- * resetting flags in the DomainHandlers list) and then calling something
- * else to conduct the search.  This structure is called for due to the
- * recursive nature of the search.
- */
-int SetUpCallOut(char *DName)
-{
-
-    DName = RealDomainName(DName);
-    RunList(&DomainHandlers, ClearSearched);	/* clears searched flag */
-    return CallOutWork(DName);		/* do possibly recursive work	*/
-}
-
-/*
  * CallOutWork()
  *
  * This does actual work of SetUpCallOut().  This is separated from the
@@ -459,51 +456,26 @@ printf("Loop detected\n");
 }
 
 /*
- * SystemInSecondary()
+ * SetUpCallOut()
  *
- * This looks for the given system in the secondary lists.  If a domain
- * was specified then just return almost immediately.
+ * This is responsible for discovering what system should be called for
+ * delivering mail to the designated domain.  It returns the index of the
+ * node to receive the domain mail (whether final destination or simply a
+ * transshipper).  If we serve the domain then return Error.
+ *
+ * NB: This is an interface function to the routines which actually handle
+ * setting the proper call out flags and returning the proper index.  The
+ * function itself initializes the data structure for the search (by
+ * resetting flags in the DomainHandlers list) and then calling something
+ * else to conduct the search.  This structure is called for due to the
+ * recursive nature of the search.
  */
-char SystemInSecondary(char *Name, char *Domain, char *dup)
+int SetUpCallOut(char *DName)
 {
-    int rover;
-    char *sep;
-    SYS_FILE secondary;
-    label name;
-    char WorkName[(NAMESIZE * 2) + 1];
-    char SearchSecondary(char *secondary,char *Name,char *Domain,char *isdup);
 
-    strCpy(WorkName, Name);
-    /* is the domain specified already?  if so, parse it */
-    if ((sep = strchr(WorkName, '_')) != NULL ||
-	(sep = strchr(WorkName, '.')) != NULL) {
-	*sep++ = 0;
-	NormStr(WorkName);
-	NormStr(sep);
-	if (strchr(sep, '_') != NULL ||
-	    strchr(sep, '.') != NULL)
-	    return FALSE;	/* no subdomains */
-	if (strLen(sep) < 1) return FALSE;
-	strCpy(Name, WorkName);
-	strCpy(Domain, sep);
-	*dup = FALSE;		/* by definition */
-	return TRUE;
-    }
-
-    Domain[0] = 0;
-    for (rover = 0; rover < 100; rover++) {
-	sprintf(name, "nodes%d.fst", rover);
-	makeSysName(secondary, name, &cfg.netArea);
-	if (access(secondary, 0) != 0) break;
-	if (SearchSecondary(secondary, Name, Domain, dup)) break;
-    }
-
-    strCpy(WorkName, Name);
-    /* make sure we found something and it's not us */
-    return (Domain[0] != 0 &&
-		strCmpU(Name, cfg.codeBuf + cfg.nodeName) != SAMESTRING &&
-		strCmpU(UseNetAlias(WorkName,FALSE), cfg.codeBuf + cfg.nodeName)
-				!= SAMESTRING);
+    DName = RealDomainName(DName);
+    RunList(&DomainHandlers, ClearSearched);	/* clears searched flag */
+    return CallOutWork(DName);		/* do possibly recursive work	*/
 }
 
 /*
@@ -576,6 +548,53 @@ static char SearchSecondary(char *secondary,char *Name,char *Domain,char *isdup)
 }
 
 /*
+ * SystemInSecondary()
+ *
+ * This looks for the given system in the secondary lists.  If a domain
+ * was specified then just return almost immediately.
+ */
+char SystemInSecondary(char *Name, char *Domain, char *dup)
+{
+    int rover;
+    char *sep;
+    SYS_FILE secondary;
+    label name;
+    char WorkName[(NAMESIZE * 2) + 1];
+
+    strCpy(WorkName, Name);
+    /* is the domain specified already?  if so, parse it */
+    if ((sep = strchr(WorkName, '_')) != NULL ||
+	(sep = strchr(WorkName, '.')) != NULL) {
+	*sep++ = 0;
+	NormStr(WorkName);
+	NormStr(sep);
+	if (strchr(sep, '_') != NULL ||
+	    strchr(sep, '.') != NULL)
+	    return FALSE;	/* no subdomains */
+	if (strLen(sep) < 1) return FALSE;
+	strCpy(Name, WorkName);
+	strCpy(Domain, sep);
+	*dup = FALSE;		/* by definition */
+	return TRUE;
+    }
+
+    Domain[0] = 0;
+    for (rover = 0; rover < 100; rover++) {
+	sprintf(name, "nodes%d.fst", rover);
+	makeSysName(secondary, name, &cfg.netArea);
+	if (access(secondary, 0) != 0) break;
+	if (SearchSecondary(secondary, Name, Domain, dup)) break;
+    }
+
+    strCpy(WorkName, Name);
+    /* make sure we found something and it's not us */
+    return (Domain[0] != 0 &&
+		strCmpU(Name, cfg.codeBuf + cfg.nodeName) != SAMESTRING &&
+		strCmpU(UseNetAlias(WorkName,FALSE), cfg.codeBuf + cfg.nodeName)
+				!= SAMESTRING);
+}
+
+/*
  * FindCost()
  *
  * This finds the cost of sending mail to a given domain.
@@ -587,27 +606,6 @@ UNS_16 FindCost(char *domain)
     if ((data = SearchList(&Costs, domain)) == NULL)
 	return UnknownCost;
     return *data;
-}
-
-/*
- * DomainLog()
- *
- * This writes out a message to the domain log.
- */
-static void DomainLog(char *str)
-{
-    SYS_FILE name;
-    char work[200];
-    extern SListBase Errors;
-
-    sprintf(work, "(%s %s) %s", formDate(), Current_Time(), str);
-    makeSysName(name, "domain.log", &cfg.domainArea);
-    CallMsg(name, work);
-    if (inNet == NON_NET) {
-	AddData(&Errors, strdup(str), NULL, FALSE);
-    }
-    else
-	netResult(str);		/* netResult() will add time/date stuff */
 }
 
 /*

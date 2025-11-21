@@ -123,6 +123,23 @@ void SaveBioInfo(int which)
 }
 
 /*
+ * ShowBioName()
+ *
+ * This internal function shows the name of a person with a bio.  It is called
+ * in connection with RunList() (see above).
+ */
+static void ShowBioName(DirEntry *entry)
+{
+    char *dot;
+
+    if ((dot = strchr(entry->unambig, '.')) == NULL) return;
+    *dot = 0;
+    getLog(&logTmp, atoi(entry->unambig));
+    if (logTmp.lbflags.L_INUSE)
+	mPrintf("%s, ", logTmp.lbname);
+}
+
+/*
  * BioDirectory()
  *
  * This shows who's written biographies.  Rather ugly since we're between
@@ -140,21 +157,3 @@ void BioDirectory()
     else mPrintf("\b\b. \n ");
     homeSpace();
 }
-
-/*
- * ShowBioName()
- *
- * This internal function shows the name of a person with a bio.  It is called
- * in connection with RunList() (see above).
- */
-static void ShowBioName(DirEntry *entry)
-{
-    char *dot;
-
-    if ((dot = strchr(entry->unambig, '.')) == NULL) return;
-    *dot = 0;
-    getLog(&logTmp, atoi(entry->unambig));
-    if (logTmp.lbflags.L_INUSE)
-	mPrintf("%s, ", logTmp.lbname);
-}
-

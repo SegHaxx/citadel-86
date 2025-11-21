@@ -375,6 +375,28 @@ void newPW()
 }
 
 /*
+ * BadUserName()
+ *
+ * This function searches badnames.sys to discover if the requested name is
+ * acceptable or not.
+ */
+static int BadUserName(label fullnm)
+{
+    SYS_FILE name;
+    char line[25], toReturn = FALSE;
+    FILE *fd;
+
+    makeSysName(name, "badnames.sys", &cfg.roomArea);
+    if ((fd = fopen(name, READ_TEXT)) != NULL) {
+	while (GetAString(line, sizeof line, fd) != NULL && !toReturn)
+	    if (strCmpU(fullnm, line) == 0)
+		toReturn = TRUE;
+	fclose(fd);
+    }
+    return toReturn;
+}
+
+/*
  * newUser()
  *
  * This is the add new user function.
@@ -383,7 +405,6 @@ void newUser(logBuffer *lBuf)
 {
     logBuffer   l2;
     char	*temp;
-    int BadUserName(label fullnm);
     char	fullnm[NAMESIZE], tmp[30];
     SYS_FILE    checkHeld;
     char	pw[NAMESIZE], NewLogin;
@@ -621,28 +642,6 @@ void newUser(logBuffer *lBuf)
 	}
     }
     killLogBuf(&l2);
-}
-
-/*
- * BadUserName()
- *
- * This function searches badnames.sys to discover if the requested name is
- * acceptable or not.
- */
-static int BadUserName(label fullnm)
-{
-    SYS_FILE name;
-    char line[25], toReturn = FALSE;
-    FILE *fd;
-
-    makeSysName(name, "badnames.sys", &cfg.roomArea);
-    if ((fd = fopen(name, READ_TEXT)) != NULL) {
-	while (GetAString(line, sizeof line, fd) != NULL && !toReturn)
-	    if (strCmpU(fullnm, line) == 0)
-		toReturn = TRUE;
-	fclose(fd);
-    }
-    return toReturn;
 }
 
 /*

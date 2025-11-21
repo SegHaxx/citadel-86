@@ -36,15 +36,14 @@ typedef struct {
 } IgnoreUserMailRecord;
 
 /*
- * IgMailRemoveEntries - snarfed over from MAIL.C
+ * IgMailRemoveEntries
  *
  * This function removes the specified author/target pair from the list of
  * ignored users.  If target is -1, all entries pertaining to source are
  * removed (for instance, if a user is deleted or rolled over).  Same if
  * source is -1.
  */
-int IgMailRemoveEntries(int source, int target)
-{
+int IgMailRemoveEntries(int source, int target){
         IgnoreUserMailRecord mr;
         int tracker;
 
@@ -146,6 +145,13 @@ void putLog(logBuffer *lBuf, int n)
     fflush(logfl);
 }
 
+static void *RemoveModerator(NumToString *element, char *name)
+{
+	if (strCmpU(element->string, name) == 0)
+		return element;
+	return NULL;
+}
+
 char	*LCHeld = "log%d.hld";
 /*
  * RemoveUser()
@@ -157,7 +163,6 @@ void RemoveUser(int logNo, logBuffer *lBuf)
 	extern SListBase Moderators;
 	extern SListBase MailForward;
 	SYS_FILE killHeld;
-	void *RemoveModerator();
 	char heldbuf[20];
 
 	/* remove old held message */
@@ -184,12 +189,3 @@ void RemoveUser(int logNo, logBuffer *lBuf)
 	IgMailRemoveEntries(logNo, -1);
 	IgMailRemoveEntries(-1, logNo);
 }
-
-
-static void *RemoveModerator(NumToString *element, char *name)
-{
-	if (strCmpU(element->string, name) == 0)
-		return element;
-	return NULL;
-}
-

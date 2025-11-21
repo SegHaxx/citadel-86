@@ -36,64 +36,6 @@ extern int     thisRoom;
 
 extern SListBase InfoMap;
 
-
-/*
- * EditInfo()
- *
- * This function adds new information.  Once the new information is acquired
- * the entire list is written back out to disk.
- */
-void EditInfo()
-{
-    extern FILE *upfd;
-    extern char EndWithCR;
-    int  HiNumber = 0;
-    void FindHighest();
-    NumToString *map;
-    char temp[20];
-    SYS_FILE name;
-
-    msgBuf.mbtext[0] = 0;
-    if ((map = SearchList(&InfoMap, roomBuf.rbname)) != NULL) {
-	if (getYesNo("Edit current info")) {
-	    GetInfo(roomBuf.rbname);
-	}
-    }
-
-    mPrintf("\n Information editing");
-    doCR();
-    CleanEnd(msgBuf.mbtext);
-    mPrintf("%s", msgBuf.mbtext);
-    outFlag = OUTOK;
-    if (GetBalance(ASCII,msgBuf.mbtext,MAXTEXT-50,INFO_ENTRY,"") && onLine()) {
-	CleanEnd(msgBuf.mbtext);
-	if (map != NULL) {
-	    sprintf(temp, "%d.inf", map->num);
-	}
-	else {
-	    sprintf(temp, "%d.inf", thisRoom);
-	    makeSysName(name, temp, &cfg.infoArea);
-	    if (access(name, 0) == 0) {
-		HiNumber = 0;
-		RunListA(&InfoMap, FindHighest, (void *) &HiNumber);
-		HiNumber++;
-		sprintf(temp, "%d.inf", HiNumber);
-	    }
-	    else HiNumber = thisRoom;
-	}
-	makeSysName(name, temp, &cfg.infoArea);
-	redirect(name, INPLACE_OF);
-	mFormat(msgBuf.mbtext, oChar, doCR);
-	fprintf(upfd, "\n%s\n", END_INFO);
-	undirect();
-	if (map == NULL) {
-	    AddData(&InfoMap, NtoStrInit(HiNumber, roomBuf.rbname, 0, FALSE),
-						NULL, FALSE);
-	    WriteOutInformation();
-	}
-    }
-}
-
 /*
  * FindHighest()
  *
@@ -134,6 +76,62 @@ static char *GetInfo(label name)
 	return NULL;
     }
     return NULL;
+}
+
+/*
+ * EditInfo()
+ *
+ * This function adds new information.  Once the new information is acquired
+ * the entire list is written back out to disk.
+ */
+void EditInfo()
+{
+    extern FILE *upfd;
+    extern char EndWithCR;
+    int  HiNumber = 0;
+    NumToString *map;
+    char temp[20];
+    SYS_FILE name;
+
+    msgBuf.mbtext[0] = 0;
+    if ((map = SearchList(&InfoMap, roomBuf.rbname)) != NULL) {
+	if (getYesNo("Edit current info")) {
+	    GetInfo(roomBuf.rbname);
+	}
+    }
+
+    mPrintf("\n Information editing");
+    doCR();
+    CleanEnd(msgBuf.mbtext);
+    mPrintf("%s", msgBuf.mbtext);
+    outFlag = OUTOK;
+    if (GetBalance(ASCII,msgBuf.mbtext,MAXTEXT-50,INFO_ENTRY,"") && onLine()) {
+	CleanEnd(msgBuf.mbtext);
+	if (map != NULL) {
+	    sprintf(temp, "%d.inf", map->num);
+	}
+	else {
+	    sprintf(temp, "%d.inf", thisRoom);
+	    makeSysName(name, temp, &cfg.infoArea);
+	    if (access(name, 0) == 0) {
+		HiNumber = 0;
+		RunListA(&InfoMap, (void(*)(void*,void*))FindHighest, (void *) &HiNumber);
+		HiNumber++;
+		sprintf(temp, "%d.inf", HiNumber);
+	    }
+	    else HiNumber = thisRoom;
+	}
+	makeSysName(name, temp, &cfg.infoArea);
+	redirect(name, INPLACE_OF);
+	mFormat(msgBuf.mbtext, oChar, doCR);
+	fprintf(upfd, "\n%s\n", END_INFO);
+	undirect();
+	if (map == NULL) {
+	    AddData(&InfoMap, NtoStrInit(HiNumber, roomBuf.rbname, 0, FALSE),
+						NULL, FALSE);
+	    WriteOutInformation();
+	}
+    }
 }
 
 /*
@@ -185,39 +183,6 @@ void ChangeInfoName(char *newname)
 }
 
 /*
- * AllInfo()
- *
- * This function implements .Known Info.
- */
-void AllInfo()
-{
-    int rover, roomNo;
-    extern int TopFloor;
-    int InfoShow();
-    extern char ShowNew, SelNew;
-    extern int	 CurLine;
-
-    doCR();
-    PagingOn();
-    if (FloorMode) {
-	for (rover = 0; rover < TopFloor; rover++) {
-	    roomNo = FirstRoom(rover);
-	    ShowNew = 2;
-	    SelNew = TRUE;
-	    if (FloorRunner(roomNo, CheckFloor) != ERROR) {
-		mPrintf("[%s]", FloorTab[rover].FlName);
-		doCR();
-		FloorRunner(roomNo, InfoShow);
-	    }
-	    ShowNew = FALSE;
-	    SelNew = FALSE;
-	}
-    }
-    else tableRunner(InfoShow, TRUE);
-    PagingOff();
-}
-
-/*
  * InfoShow()
  *
  * This function will actually show the information for a room.
@@ -246,3 +211,34 @@ static int InfoShow(int r)
     return 0;
 }
 
+/*
+ * AllInfo()
+ *
+ * This function implements .Known Info.
+ */
+void AllInfo()
+{
+    int rover, roomNo;
+    extern int TopFloor;
+    extern char ShowNew, SelNew;
+    extern int	 CurLine;
+
+    doCR();
+    PagingOn();
+    if (FloorMode) {
+	for (rover = 0; rover < TopFloor; rover++) {
+	    roomNo = FirstRoom(rover);
+	    ShowNew = 2;
+	    SelNew = TRUE;
+	    if (FloorRunner(roomNo, CheckFloor) != ERROR) {
+		mPrintf("[%s]", FloorTab[rover].FlName);
+		doCR();
+		FloorRunner(roomNo, InfoShow);
+	    }
+	    ShowNew = FALSE;
+	    SelNew = FALSE;
+	}
+    }
+    else tableRunner(InfoShow, TRUE);
+    PagingOff();
+}

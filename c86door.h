@@ -7,7 +7,9 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
+#ifdef __MSDOS__
 #include "dir.h"
+#endif
 #include "ctype.h"
 
 /*
@@ -93,6 +95,6 @@ typedef struct {
 
 char doDoor(char x);
 char BackFromDoor(void);
-char NoTimeForDoor(int which, DoorData *DoorInfo);
+//char NoTimeForDoor(int which, DoorData *DoorInfo);
 
 #endif

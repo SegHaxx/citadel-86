@@ -35,7 +35,9 @@
  * represented in this list then no forwarding should take place.  This
  * forwarding includes both to other systems and within this system.
  */
-void FreeForwarding(), *CheckFwd(), *EatForwarding(char *line);
+static void FreeForwarding(ForwardMail* data);
+static void* CheckFwd(ForwardMail* data,char* who);
+static void* EatForwarding(char* line);
 SListBase MailForward = { NULL, CheckFwd, NULL, FreeForwarding, EatForwarding };
 char FindLocal = FALSE;		/* ugly kludge */
 
@@ -135,25 +137,6 @@ void OpenForwarding()
 }
 
 /*
- * UpdateForwarding()
- *
- * This function updates ctdlfwd.sys.
- */
-void UpdateForwarding()
-{
-    FILE *MailFwdFd;
-    SYS_FILE tempName;
-    void WriteForward();
-    extern char *WRITE_TEXT;
-
-    makeSysName(tempName, "ctdlfwd.sys", &cfg.roomArea);
-    if ((MailFwdFd = fopen(tempName, WRITE_TEXT)) != NULL) {
-	RunListA(&MailForward, WriteForward, (void *) MailFwdFd);
-	fclose(MailFwdFd);
-    }
-}
-
-/*
  * WriteForward()
  *
  * This function will write out a record to ctdlfwd.sys.  This is used in
@@ -168,6 +151,24 @@ static void WriteForward(ForwardMail *data, FILE *fd)
     fprintf(fd, "%s\t%s\t%s\n", data->UserName,
 			(data->System == NULL) ? "" : data->System,
 			data->Alias);
+}
+
+/*
+ * UpdateForwarding()
+ *
+ * This function updates ctdlfwd.sys.
+ */
+void UpdateForwarding()
+{
+    FILE *MailFwdFd;
+    SYS_FILE tempName;
+    extern char *WRITE_TEXT;
+
+    makeSysName(tempName, "ctdlfwd.sys", &cfg.roomArea);
+    if ((MailFwdFd = fopen(tempName, WRITE_TEXT)) != NULL) {
+	RunListA(&MailForward, (void(*)(void*,void*))WriteForward, (void *) MailFwdFd);
+	fclose(MailFwdFd);
+    }
 }
 
 /*

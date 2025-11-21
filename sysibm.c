@@ -17,7 +17,7 @@
 /* #define HAVE_LSS    -- long lost file - not available from Hue, Jr. */
 
 #include "ctdl.h"
-#include "sys\stat.h"
+#include "sys/stat.h"
 #include "ctype.h"
 #include "stdarg.h"
 #include <alloc.h>

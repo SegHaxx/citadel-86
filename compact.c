@@ -28,8 +28,6 @@
 /* #define DEBUG */
 
 void StopEncode(void);
-int Combine(int val);
-int Decode2(int val);
 
 #define NO_SET		4	/* no such set */
 #define CAPS		0
@@ -77,6 +75,24 @@ int StartEncode(int (*func)(int c))
 	return 1;
 }
 
+static int Combine(int val)
+{
+	int		toReturn;
+
+	SendVal |= (val << BitsUsed);
+	SendVal &= 0xff;
+	Next = (val >> BitsUsed);
+	BitsUsed += 5;
+	if (BitsUsed >= 8) {
+		toReturn = (*EncOF)(SendVal);
+		SendVal = val >> (13 - BitsUsed);
+		BitsUsed %= 8;
+	}
+	else toReturn = TRUE;
+
+	return toReturn;
+}
+
 void StopEncode()
 {
 	if (EncodeByteCount == 0) return;	/* don't bother */
@@ -116,24 +132,6 @@ int Encode(int c)
 			toReturn = Combine(compress[c - 32].CompValue);
 		}
 	}
-	return toReturn;
-}
-
-static int Combine(int val)
-{
-	int		toReturn;
-
-	SendVal |= (val << BitsUsed);
-	SendVal &= 0xff;
-	Next = (val >> BitsUsed);
-	BitsUsed += 5;
-	if (BitsUsed >= 8) {
-		toReturn = (*EncOF)(SendVal);
-		SendVal = val >> (13 - BitsUsed);
-		BitsUsed %= 8;
-	}
-	else toReturn = TRUE;
-
 	return toReturn;
 }
 
@@ -177,34 +175,6 @@ void StopDecode()
 {
 }
 
-int Decode(int c)
-{
-	static int mask[] = {
-	   0, 1, 3, 7, 0xf, 0x1f
-	};
-	int AB;
-
-	if (DecCurSet == FINISHED) return TRUE;
-
-
-	if (!Decode2(c & mask[NB])) return FALSE;
-
-	c  >>= NB;
-
-	AB = 8 - NB;
-
-	if (AB >= 5) {
-		ThisVal = 0;
-		AB -= 5;
-		NB  = 5;
-		if (!Decode2(c & mask[NB])) return FALSE;
-		c >>= 5;
-	}
-	NB = 5 - AB;
-	ThisVal = c;
-	return TRUE;
-}
-
 static int Decode2(int val)
 {
 	int toReturn;
@@ -242,4 +212,32 @@ static int Decode2(int val)
 		}
 	}
 	return toReturn;
+}
+
+int Decode(int c)
+{
+	static int mask[] = {
+	   0, 1, 3, 7, 0xf, 0x1f
+	};
+	int AB;
+
+	if (DecCurSet == FINISHED) return TRUE;
+
+
+	if (!Decode2(c & mask[NB])) return FALSE;
+
+	c  >>= NB;
+
+	AB = 8 - NB;
+
+	if (AB >= 5) {
+		ThisVal = 0;
+		AB -= 5;
+		NB  = 5;
+		if (!Decode2(c & mask[NB])) return FALSE;
+		c >>= 5;
+	}
+	NB = 5 - AB;
+	ThisVal = c;
+	return TRUE;
 }
