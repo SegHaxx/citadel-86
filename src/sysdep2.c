@@ -64,6 +64,7 @@
 #define SETDISK		14
 
 static char Refresh = 0;
+static char UnderDPMI;
 static char UnderDesqView;
 
 extern char *R_W_ANY;
@@ -108,8 +109,6 @@ extern char loggedIn;
 
 char straight = TRUE;
 char oldmodem = FALSE;
-void DVApiCall(int code);
-int IsDesqView( void );
 void OutString(char *s);
 
 /*
@@ -662,6 +661,63 @@ fprintf(fd,
     }
 }
 
+// Detect the presence of DPMI. This mostly means Windows.
+static int IsDPMI(void){
+	union REGS r;
+	r.x.ax=0x1687;
+	int86(0x2F,&r,&r);
+	return r.x.ax?FALSE:TRUE;
+}
+
+// Yield CPU timeslice to DPMI host
+static void __dpmi_yield(void){
+	union REGS r;
+	r.x.ax=0x1680;
+	int86(0x2F,&r,&r);
+}
+
+// Detect the presence of DesqView.
+static int IsDesqView(void){
+	union REGS s;
+	s.x.cx=0x4445;
+	s.x.dx=0x5351;
+	s.x.ax=0x2b01;
+	intdos(&s,&s);
+	return !(s.h.al==0xff);
+}
+
+// This is work code for making API calls to DesqView.
+static void DVApiCall(int code){
+    _BX=code;
+    _AX=0x101a;
+    geninterrupt(0x15);
+    _AX=_BX;
+    geninterrupt(0x15);
+    _AX=0x1025;
+    geninterrupt(0x15);
+}
+
+// Yield CPU to a detected multitasking environment, or fall back on HLT
+static void Yield(void){
+	if(UnderDPMI){__dpmi_yield();return;}
+	if(UnderDesqView){DVApiCall(0x1000);return;}
+	asm hlt; // the only thing that works on DOSBox
+}
+
+// This is used to be nice to the nice operating system.
+void BeNice(int x){
+	Yield();
+	if(x!=IDLE_PAUSE) return;
+	Yield();
+	Yield();
+}
+
+// Detect the presence of a multitasking environment
+static void InitYield(void){
+	if((UnderDPMI=IsDPMI()))         printf("DPMI detected.\n");
+	if((UnderDesqView=IsDesqView())) printf("DesqView detected.\n");
+}
+
 /*
  * systemInit()
  *
@@ -737,8 +793,7 @@ int systemInit()
     ctrlbrk(Control_C);
 #endif
 
-    if ((UnderDesqView = IsDesqView()))
-	printf("DesqView detected.\n");
+	InitYield();
 
     InitProtocols();
 
@@ -910,55 +965,6 @@ int WhatDay()
     _AX = 0x2a00;
     geninterrupt(0x21);
     return _AL;
-}
-
-/*
- * BeNice()
- *
- * This is used to be nice to the nice operating system.
- */
-void BeNice(int x)
-{
-    if (UnderDesqView) {
-	DVApiCall(0x1000);
-	if (x == IDLE_PAUSE) {
-	    DVApiCall(0x1000);
-	    DVApiCall(0x1000);
-	    DVApiCall(0x1000);
-	}
-    }
-}
-
-/*
- * IsDesqView()
- *
- * This function detects the presence of DesqView.
- */
-int IsDesqView()
-{
-    union REGS s;
-
-    s.x.cx = 0x4445;
-    s.x.dx = 0x5351;
-    s.x.ax = 0x2b01;
-    intdos(&s, &s);
-    return !(s.h.al == 0xff);
-}
-
-/*
- * DVApiCall()
- *
- * This is work code for making API calls to DesqView.
- */
-void DVApiCall(int code)
-{
-    _BX = code;
-    _AX = 0x101a;
-    geninterrupt(0x15);
-    _AX = _BX;
-    geninterrupt(0x15);
-    _AX = 0x1025;
-    geninterrupt(0x15);
 }
 
 /*
