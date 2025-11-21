@@ -898,7 +898,7 @@ int getModemId()
 	setTimer(&ff);
 
 	i = strlen(IdBuffer);
-	while (timeSince(&ff) < 5l) {
+	while (timeSince(&ff) < 1l) {
 		if (MIReady()) {
 			if ((c = Citinp()) == '\r' || c == '\n') {
 				IdBuffer[i] = 0;

@@ -165,8 +165,8 @@ void OutString(char *s)
 	if (cfg.DepData.InterCharDelay) pause(cfg.DepData.InterCharDelay);
 	temp = *s;
 	outMod(*s++);    /* output string */
-	if (temp == '\r')
-	    pause(100);	/* wait a full second */
+	//if (temp == '\r')
+	    //pause(100);	/* wait a full second */
     }
 }
 
