@@ -76,8 +76,7 @@ char    Pageable, Continuous;
 char	*NoFileStr = "\n No %s.\n";
 char	*who_str = "who";
 char	*strFile = "filename";
-/* char   *VERSION = "3.47.s6"; */
-char	*VERSION = "3.49";
+char	*VERSION = "3.50b1";
 char	*ALL_LOCALS  = "&L";
 char	*WRITE_LOCALS = "All Local Systems";
 char	FormatFlag = FALSE;
