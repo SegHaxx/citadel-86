@@ -1,0 +1,211 @@
+#
+# MAKEFILE
+#
+#  PURPOSE: for Citadel-86 main executables.  Utility makefile is separate.
+#
+#  This makefile is meant for use in automatic compilation of Citadel-86.  Since
+#  this version of Citadel-86 is written in the Turbo C dialect, this makefile
+#  is tailored toward an MS-DOS environment using Turbo C.  However, I've tried
+#  to keep the system dependent code as isolated as is possible in a makefile.
+#  I also believe that I have not violated any of the UNIX makefile rules with
+#  this file, outside of the backslashes necessary for DOS.
+#
+#  All Citadel-specific source files, including the headers, are expected to be
+#  in the current directory; all system (stdio.h, etc.) are expected to be in
+#  the $(INC) directories (or the current directory).
+#
+#  For those of you who like clean, tidy makefiles: Sorry.  It works.  It don't
+#  get in the way.  Good 'nuff fer me.
+#
+#  Note that CTDLANSI.H and ANSISYS.H play no part in this file.  I don't like
+#  doing large recompiles incessantly.
+#
+#  Comment from current project maintainer (Steve Steffler): We would like to
+#  re-integrate the aforementioned CTDLANSI.H and ANSISYS.H files into this 
+#  makefile, since compile time for the project is no longer a concern.
+#
+CC=wcl
+CFLAGS=-za99 -oahnxs -ei -zp8 -0 -oe=5
+HEADERS=ctdl.h sysdep.h slist.h
+
+CN=arch.o libnet.o liblog.o libcryp.o libroom.o\
+ libtabl.o libmsg.o liblog2.o libtime.o libbio.o formhdr.o
+
+PORT=	areas.o \
+        bio.o \
+        calllog.o cc.o $(CN) compact.o ctdl.o \
+	domains.o dom-core.o dom-init.o dom-data.o \
+	events.o \
+	floors.o \
+	hot_help.o \
+	info.o infodisp.o \
+	log.o \
+	mail.o mailfwd.o misc.o modem.o msg.o msgnfmt.o \
+	netcache.o netcall.o netedit.o netmisc.o netrcv.o netitl.o \
+	offline.o \
+	rooma.o roomb.o route.o \
+	shared.o \
+	tools.o \
+	virt.o virt2.o vortex.o \
+	slist.o kstrk.o
+
+.c.o:
+	$(CC) $(CFLAGS) $< -fe=$@
+
+NORMAL: ctdl
+
+ALL: ctdl confg c86door
+
+ctdl: $(PORT) sysdep1_unix.o citvid.o sysarc.o splitf.o \
+		syszm.o sysdoor.o sys_linux.o sysedit.o syszibm.o
+
+ctdlz.exe ctdlz: $(PORT) sysdep1_unix.o sysarc.o syszm.o splitf.o \
+		sysdoor.o syszen.o syszibm.o sysedit.o
+	tlink @zz
+
+ctdl-ti.exe ctdl-ti: $(PORT) sysdep1_unix.o sysarc.o splitf.o \
+		syszm.o sysdoor.o systi.o sysedit.o ti_delay.o \
+		ti_modem.o ti_video.o
+	tlink @tilink
+	del ctdl-ti.map
+
+c86door: c86door.o
+	#tlink @cdoor
+
+c86door.o: c86door.h
+
+ctdl.o: $(HEADERS)
+
+floors.o: $(HEADERS)
+
+events.o: $(HEADERS)
+
+rooma.o: $(HEADERS)
+
+roomb.o: $(HEADERS)
+
+offline.o: $(HEADERS)
+
+info.o: $(HEADERS)
+
+infodisp.o: $(HEADERS)
+
+misc.o: $(HEADERS)
+
+shared.o: $(HEADERS)
+
+mail.o: $(HEADERS)
+
+mailfwd.o: $(HEADERS)
+
+modem.o: $(HEADERS)
+
+log.o: $(HEADERS)
+
+msg.o: $(HEADERS)
+
+netcall.o: $(HEADERS)
+
+netcache.o: $(HEADERS)
+
+netrcv.o: $(HEADERS)
+
+sysdep2.o: $(HEADERS)
+
+splitf.o: $(HEADERS)
+
+sysdep1_unix.o: $(HEADERS)
+
+sysarc.o: $(HEADERS)
+
+netmisc.o: $(HEADERS)
+
+netedit.o: $(HEADERS)
+
+netitl.o: $(HEADERS)
+
+citvid.o: $(HEADERS) citvid.h
+
+citvid2.o: $(HEADERS) citvid2.h
+
+virt.o: $(HEADERS) ctdlvirt.h
+
+virt2.o: $(HEADERS) ctdlvirt.h
+
+slist.o: $(HEADERS) 
+
+kstrk.o: $(HEADERS)
+
+confg: confg.o confg2.o syscfg.o $(CN) info.o mailfwd.o \
+		shared.o virt.o tools.o dom-init.o slist.o \
+		dom-core.o dom-data.o domains.o 
+
+confg.o: $(HEADERS)
+
+confg2.o: $(HEADERS)
+
+syscfg.o: $(HEADERS) c86door.h
+
+arch.o: $(HEADERS)
+
+citzen.o: citzen.asm
+	dir
+
+libnet.o: $(HEADERS)
+
+libbio.o: $(HEADERS)
+
+liblog.o: $(HEADERS)
+
+liblog2.o: $(HEADERS)
+
+libcryp.o: $(HEADERS)
+
+libroom.o: $(HEADERS)
+
+libtabl.o: $(HEADERS)
+
+libmsg.o: $(HEADERS)
+
+calllog.o: $(HEADERS)
+
+hot_help.o: $(HEADERS)
+
+vortex.o: $(HEADERS)
+
+syszm.o: $(HEADERS)
+
+cc.o: $(HEADERS)
+
+sysdoor.o: $(HEADERS) c86door.h
+
+sysedit.o: $(HEADERS)
+
+sys_linux.o: $(HEADERS)
+
+msgnfmt.o: $(HEADERS)
+
+route.o: $(HEADERS)
+
+compact.o: $(HEADERS)
+
+areas.o: $(HEADERS)
+
+syszibm.o: $(HEADERS)
+
+ti_modem.o: ti_pro.h
+
+ti_video.o: ti_pro.h
+
+ti_delay.o:
+
+systi.o: $(HEADERS)
+
+dom-core.o domains.o: $(HEADERS) 2ndfmt.h
+
+bio.o: $(HEADERS)
+
+stroll.o: $(HEADERS)
+
+clean:
+	rm -f *.o *.a

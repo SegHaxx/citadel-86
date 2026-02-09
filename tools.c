@@ -206,7 +206,7 @@ void CallMsg(char *fn, char *str)
  * This function interprets the string and returns it in seconds.
  */
 int ReadDate(char *date, long *RetTime){
-#ifdef __TURBOC__
+#ifdef __MSDOS__
     static char *MonthTab[] = {
 	"JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
 	"JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"
@@ -262,7 +262,7 @@ int ReadDate(char *date, long *RetTime){
  * This gives the current time in absolute terms.
  */
 long CurAbsolute(){
-#ifdef __TURBOC__
+#ifdef __MSDOS__
     struct date dateblk;
     struct time timeblk;
 
