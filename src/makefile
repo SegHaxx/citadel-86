@@ -24,10 +24,9 @@
 #  re-integrate the aforementioned CTDLANSI.H and ANSISYS.H files into this 
 #  makefile, since compile time for the project is no longer a concern.
 #
-STDINC=\borlandc\include
-LIB_INC=\borlandc\lib
-CC=bcc -D -ml -O -wpro -wuse -j2
-INC=-I$(STDINC) -I$(LIB_INC)  
+CC=bcc
+OPTFLAGS=-O1 -Og -Op
+CFLAGS=-D -ml $(OPTFLAGS) -wpro -wuse -j2 -c -d
 HEADERS=ctdl.h sysdep.h slist.h
 
 PORT=	arch.obj areas.obj \
@@ -49,17 +48,15 @@ PORT=	arch.obj areas.obj \
 	slist.obj kstrk.obj
 
 .c.obj:
-   $(CC) -c -d $(INC) $<
-#   sedd $<
-
-NORMAL: ctdl.exe
+	$(CC) $(CFLAGS) $<
 
 ALL: ctdl.exe confg.exe c86door.exe
 
+NORMAL: ctdl.exe
+
 ctdl.exe: $(PORT) sysdep2.obj sysdep1.obj citvid.obj sysarc.obj splitf.obj \
 		syszm.obj sysdoor.obj sysibm.obj sysedit.obj syszibm.obj
-	tlink @gg
-	del ctdl.map
+	tlink @ctdl.rsp
 
 ctdlz.exe ctdlz: $(PORT) sysdep2.obj sysdep1.obj sysarc.obj syszm.obj splitf.obj \
 		sysdoor.obj syszen.obj syszibm.obj sysedit.obj
@@ -69,12 +66,9 @@ ctdl-ti.exe ctdl-ti: $(PORT) sysdep2.obj sysdep1.obj sysarc.obj splitf.obj \
 		syszm.obj sysdoor.obj systi.obj sysedit.obj ti_delay.obj \
 		ti_modem.obj ti_video.obj
 	tlink @tilink
-	del ctdl-ti.map
 
 c86door.exe c86door: c86door.obj
-        tlink @cdoor
-        copy c86door.exe \c86\build
-	del c86door.map
+        $(CC) -ml $**
 
 c86door.obj: c86door.h
 
@@ -143,8 +137,7 @@ kstrk.obj: $(HEADERS)
 confg.exe confg: confg.obj confg2.obj syscfg.obj cn.lib info.obj mailfwd.obj \
 		shared.obj virt.obj tools.lib dom-init.obj slist.obj \
 		dom-core.obj dom-data.obj domains.obj 
-	tlink @cc
-	del confg.map
+	tlink @confg.rsp
 
 confg.obj: $(HEADERS)
 
@@ -223,11 +216,7 @@ bio.obj: $(HEADERS)
 
 stroll.obj: $(HEADERS)
 
-#
-# It appears that due to the way DOS's command.com works, Borland's Makefile for
-# this has to be written this way rather than the way you'd do it under a sane
-# operating system.
-#
-bin: NORMAL c86door
-	copy ctdl.exe \c86\build
-	copy c86door.exe \c86\build
+clean:
+	del *.obj
+	del *.lib
+	del *.exe
