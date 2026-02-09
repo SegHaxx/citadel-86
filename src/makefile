@@ -26,7 +26,7 @@
 #
 STDINC=\borlandc\include
 LIB_INC=\borlandc\lib
-CC=bcc -D -ml -O -wpro -wuse -j2
+CC=bcc -D -ml -O1 -Og -Op -wpro -wuse -j2
 INC=-I$(STDINC) -I$(LIB_INC)  
 HEADERS=ctdl.h sysdep.h slist.h
 
@@ -52,9 +52,9 @@ PORT=	arch.obj areas.obj \
    $(CC) -c -d $(INC) $<
 #   sedd $<
 
-NORMAL: ctdl.exe
-
 ALL: ctdl.exe confg.exe c86door.exe
+
+NORMAL: ctdl.exe
 
 ctdl.exe: $(PORT) sysdep2.obj sysdep1.obj citvid.obj sysarc.obj splitf.obj \
 		syszm.obj sysdoor.obj sysibm.obj sysedit.obj syszibm.obj
@@ -73,7 +73,6 @@ ctdl-ti.exe ctdl-ti: $(PORT) sysdep2.obj sysdep1.obj sysarc.obj splitf.obj \
 
 c86door.exe c86door: c86door.obj
         tlink @cdoor
-        copy c86door.exe \c86\build
 	del c86door.map
 
 c86door.obj: c86door.h
@@ -223,11 +222,7 @@ bio.obj: $(HEADERS)
 
 stroll.obj: $(HEADERS)
 
-#
-# It appears that due to the way DOS's command.com works, Borland's Makefile for
-# this has to be written this way rather than the way you'd do it under a sane
-# operating system.
-#
-bin: NORMAL c86door
-	copy ctdl.exe \c86\build
-	copy c86door.exe \c86\build
+clean:
+	del *.OBJ
+	del *.LIB
+	del *.EXE
