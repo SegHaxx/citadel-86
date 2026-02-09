@@ -1,0 +1,5 @@
+*.o
+*.OBJ
+*.LIB
+*.EXE
+*.err
