@@ -1,0 +1,36 @@
+# Build Citadel-86 using GNU make and Borland C++ 5.02
+
+CFLAGS+=-DNO_EXTRA_HEADERS
+
+TARGETS=confg ctdl
+
+all: $(TARGETS)
+
+include Common.mk
+
+PORT=	arch.o areas.o \
+        libbio.o bio.o \
+        calllog.o cc.o ctdl.o \
+	events.o \
+	libtabl.o floors.o \
+	hot_help.o \
+	info.o infodisp.o \
+	libcryp.o log.o \
+	formhdr.o \
+	mail.o mailfwd.o misc.o modem.o libmsg.o msg.o \
+	offline.o \
+	rooma.o roomb.o \
+	tools.o \
+	slist.o kstrk.o \
+	liblog.o liblog2.o libtime.o libroom.o
+
+confg: confg.o confg2.o syscfg.o info.o mailfwd.o \
+		shared.o tools.o slist.o \
+		dom-init.o dom-data.o \
+		arch.o libnet.o libmsg.o libbio.o \
+		virt.o libroom.o libcryp.o libtabl.o liblog.o
+
+ctdl: $(PORT) sysdep2.o sysdep1_unix.o events.o citvid.o sysarc.o \
+	splitf.o syszm.o sysdoor.o sys_linux.o sysedit.o syszibm.o
+
+-include .depend

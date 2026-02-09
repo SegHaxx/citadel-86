@@ -1,0 +1,43 @@
+# Build Citadel-86 using GNU make and Watcom C/C++
+
+CC=wcl
+CFLAGS=-za99 -oahnxs -ei -zp8 -0 -oe=5
+CFLAGS+=-ze
+
+TARGETS=confg.exe ctdl.exe c86door.exe
+
+all: $(TARGETS)
+
+include Common.mk
+
+%.obj: %.c
+	$(CC) $(CFLAGS) $<
+
+PORT=	arch.obj areas.obj \
+        libbio.obj bio.obj \
+        calllog.obj cc.obj ctdl.obj \
+	events.obj \
+	libtabl.obj floors.obj \
+	hot_help.obj \
+	info.obj infodisp.obj \
+	libcryp.obj log.obj \
+	formhdr.obj \
+	mail.obj mailfwd.obj misc.obj modem.obj libmsg.obj msg.obj \
+	offline.obj \
+	rooma.obj roomb.obj \
+	tools.obj \
+	slist.obj kstrk.obj \
+	liblog.obj liblog2.obj libtime.obj libroom.obj
+
+confg.exe: confg.obj confg2.obj syscfg.obj info.obj mailfwd.obj \
+		shared.obj tools.obj slist.obj \
+		dom-init.obj dom-data.obj \
+		arch.obj libnet.obj libmsg.obj libbio.obj \
+		virt.obj libroom.obj libcryp.obj libtabl.obj liblog.obj
+
+ctdl.exe: $(PORT) sysdep2.obj sysdep1.obj events.obj citvid.obj sysarc.obj \
+	splitf.obj syszm.obj sysdoor.obj sysibm.obj sysedit.obj syszibm.obj
+
+c86door.exe c86door: c86door.obj
+
+-include .depend
