@@ -38,8 +38,6 @@
 
 #include "citcolor.h"
 
-#define ANSI_PROTOTYPING
-
 #endif
 
 #define SYSTEM_CLOCK
