@@ -11,6 +11,7 @@
 #define LOGIN
 
 #include "ctdl.h"
+#include "rooma.h"
 
 /*
 #define NEED_MSG_PEEKING 
@@ -1879,7 +1880,6 @@ void main(int argc, char **argv)
     extern char logNetResults, netDebug, DisVandals,
 		VortexHandle, BpsSet, ItlWxmodem, IgnoreDoor, more[];
     extern char *UploadLog, LocalAreaCode;
-    extern int pgdft;
     char c, x, errMsg;
     int  CmdResult = GOOD_SELECT;
 
@@ -1894,7 +1894,7 @@ void main(int argc, char **argv)
 	if (strCmpU(argv[argc], "+netlog") == SAMESTRING) {
 	    logNetResults = TRUE;
 	} else if (strncmp(argv[argc], "pgdft=", 6) == SAMESTRING) {
-	    pgdft = atoi(argv[argc] + 6);
+	    set_default_page_length(atoi(argv[argc]+6));
 	} else if (strncmp(argv[argc], "mp=", 3) == SAMESTRING) {
 	    if (strlen(argv[argc] + 3) < 15)
 		strcpy(more, argv[argc] + 3);

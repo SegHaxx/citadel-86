@@ -388,7 +388,6 @@ void newUser(logBuffer *lBuf)
     MSG_NUMBER  low;
     TwoNumbers *ttemp;
     extern char *LCHeld;
-    extern int  pgdft;
 
     if (!NewUserDoor()) {
 	HangUp(TRUE);
@@ -487,7 +486,6 @@ void newUser(logBuffer *lBuf)
 	/* kick least recent temporary acct out of userlog and claim entry: */
 	for (good = cfg.MAXLOGTAB-1; good >= 0; good--)
 	    if (!logTab[good].ltpermanent) break;
-	if (NewLogin) lBuf->lbpage = pgdft;
 
 	if (good < 0) good = cfg.MAXLOGTAB - 1;	/* too bad */
 

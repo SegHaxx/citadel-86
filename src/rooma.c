@@ -54,7 +54,6 @@ char		BpsSet = FALSE;
 SListBase	BadWords = { NULL, FindIcky, NULL, NULL, EatIcky };
 #endif
 UNS_16		*RoomMsgCount;
-int		pgdft;	/* default to 0 */
 SListBase	ChatOn = { NULL, FindStr, NULL, NULL, EatIcky };
 
 extern CONFIG    cfg;		/* A buncha variables		*/
@@ -85,6 +84,13 @@ extern label     oldTarget;	/* Room to move messages to     */
 extern char      ShowNew;
 extern char      JustChecking;
 extern SListBase Moderators;
+
+
+static unsigned char default_page_length=0;
+// Set default terminal page length for <More> paging
+void set_default_page_length(unsigned char lines){
+	default_page_length=lines;
+}
 
 /*
  * DateSearch()
@@ -791,7 +797,7 @@ void setUp(char justIn)
 	DoorPriv	= FALSE;
 
 	if (justIn)   {
-	    logBuf.lbpage = pgdft;
+	    logBuf.lbpage=default_page_length;
 	    /* set up logBuf so everything is new...	*/
 	    AnonMsgCount = 0;
 
