@@ -54,7 +54,7 @@ char		BpsSet = FALSE;
 SListBase	BadWords = { NULL, FindIcky, NULL, NULL, EatIcky };
 #endif
 UNS_16		*RoomMsgCount;
-int		pgdft;	/* default to 0 */
+int		pgdft=24;
 SListBase	ChatOn = { NULL, FindStr, NULL, NULL, EatIcky };
 
 extern CONFIG    cfg;		/* A buncha variables		*/
