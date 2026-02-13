@@ -601,6 +601,10 @@ char configure(logBuffer *lBuf, char AllQuestions, char AllowAbort)
 	}
 	lBuf->lbwidth = xwidth;
     } while (onLine() && lBuf->lbwidth < 10);
+
+	lBuf->lbpage = (int) getNumber("page length (0 to disable)", 0l, 255l);
+	logBuf.lbflags.MSGPAGE = getYesNo("Do Message Paging");
+
     if (AllQuestions) {
 	lBuf->lbflags.LFMASK = getYesNo(" Do you need Linefeeds") ? TRUE : FALSE;
     }
@@ -625,10 +629,6 @@ char configure(logBuffer *lBuf, char AllQuestions, char AllowAbort)
 	lBuf->lbflags.OLDTOO = FALSE;
 	lBuf->lbflags.TIME = TRUE;
 	lBuf->lbflags.FLOORS = lBuf->lbflags.HALF_DUP = FALSE;
-    }
-    if (AllQuestions) {
-	lBuf->lbpage = (int) getNumber("page length (0 to disable)", 0l, 255l);
-	logBuf.lbflags.MSGPAGE = getYesNo("Do Message Paging");
     }
     return TRUE;
 }
