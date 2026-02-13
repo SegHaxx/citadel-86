@@ -382,8 +382,6 @@ main(int argc, char **argv)
 		CleanCalllog = TRUE;
 	    } else if (strcmp(var, "#NO-CONSOLE-BANNER") == SAMESTRING) {
 		cfg.BoolFlags.NoConBanner = TRUE;
-	    } else if (strcmp(var, "#PARANOID-LOGIN") == SAMESTRING) {
-		cfg.BoolFlags.ParanoidLogin = TRUE;
 	    } else if (strcmp(var, "#ANONYMOUS-SESSIONS") == SAMESTRING) {
 		cfg.BoolFlags.AnonSessions = TRUE;
 	    } else if (strcmp(var, "#LOGSIZE"   )    == SAMESTRING) {

@@ -168,27 +168,17 @@ int DoAllQuestion(char *posprompt, char *negprompt)
 	return ERROR;
 }
 
-/*
- * login()
- *
- * This is the menu-level routine to log someone in.
- */
-void login(char *password)
-{
+// This is the menu-level routine to log someone in.
+void login(struct ACCT* acct){
 	extern OptValues Opt;
 	int  foundIt;
-	label name;
 	TwoNumbers *tmp;
 
-	if (cfg.BoolFlags.ParanoidLogin) {
-		if (strlen(password))
-			getNormStr("account name", name, NAMESIZE, 0);
-	}
-	foundIt =    ((PWSlot(password, /*load = */TRUE)) != ERROR);
+	foundIt =    ((PWSlot(acct->password, /*load = */TRUE)) != ERROR);
 	pwChangeCount = 1;
 
-	if (foundIt && *password && (!cfg.BoolFlags.ParanoidLogin ||
-		strCmpU(logBuf.lbname, name) == SAMESTRING)) {
+	if (foundIt && acct->password && (!cfg.BoolFlags.ParanoidLogin ||
+		strCmpU(logBuf.lbname, acct->name) == SAMESTRING)) {
 		if (!LoggedInDoor()) {
 			HangUp(TRUE);
 			return;
@@ -273,7 +263,7 @@ lcd(9);
 				HangUp(TRUE);
 				return ;	/* skip the pause() farther on*/
 			}
-		if (strlen(password) > 1 && whichIO == MODEM)
+		if (strlen(acct->password) > 1 && whichIO == MODEM)
 			if ((logTries-1) > 1) pause(2000);
 		if (!cfg.BoolFlags.unlogLoginOk  &&  whichIO == MODEM)  {
 			if (!printHelp("unlog.blb", 0))
