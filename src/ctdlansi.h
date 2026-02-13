@@ -39,7 +39,11 @@ ValidateShowMsg_f_t OptionValidate;
 #ifdef LOGIN
 
 char doInviteDisplay(void);
-void login(char *password);
+struct ACCT{
+	label password;
+	label name;
+};
+void login(struct ACCT* acct);
 void newPW(void);
 void newUser(logBuffer *lBuf);
 void storeLog(void);
