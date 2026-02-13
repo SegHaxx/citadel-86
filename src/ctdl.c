@@ -619,30 +619,23 @@ char doKnown(char expand)
     return GOOD_SELECT;
 }
 
-/*
- * doLogin()
- *
- * This function handles the L(ogin) command.
- */
-char doLogin(char moreYet)
-{
-    label passWord;
+// This function handles the L(ogin) command.
+char doLogin(char moreYet){
+	struct ACCT acct;
 
-    if (!moreYet)   mPrintf("\n");
-    if (loggedIn)   {
-	mPrintf("\n ?Already logged in!\n ");
+	if(loggedIn){
+		mPrintf("\n ?Already logged in!\n ");
+		return GOOD_SELECT;
+	}
+
+	getNormStr("account name (just carriage return if new)",acct.name,NAMESIZE,0);
+	if(strlen(acct.name)){
+		echo=CALLER;
+		getNormStr("password",acct.password,NAMESIZE,NO_ECHO);
+		echo=BOTH;
+	}
+	login(&acct);
 	return GOOD_SELECT;
-    }
-    echo	= CALLER;
-    if (getNormStr(moreYet ? "" : " password (just carriage return if new)",
-			passWord, NAMESIZE, (moreYet) ? BS_VALID : NO_ECHO) ==
-							BACKED_OUT) {
-	return BACKED_OUT;
-    }
-
-    echo	= BOTH;
-    login(passWord);
-    return GOOD_SELECT;
 }
 
 #define LOGOUT_OPTS	\
