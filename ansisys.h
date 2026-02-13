@@ -7,11 +7,6 @@
  * the system dependent porter.  May 12, 1990.
  */
 
-        /*
-         * Use these only if we are ANSI capable...
-         */
-#ifdef ANSI_PROTOTYPING
-
 #ifdef FAX_DEBUG
 void AddFaxResults(void);
 #endif
@@ -782,44 +777,3 @@ void getUtilDate(int *year, int *month, int *day, int *hours, int *minutes);
 #endif
 
 #include "sysprot.h"
-
-#else   /* !Ansiprototyping */
-
-FILE *safeopen();
-
-long CurAbsolute(),
-     sysRoomLeft(),
-     chkTimeSince();
-
-AN_UNSIGNED Citinp();
-
-char *prtNetArea();
-
-#ifdef SYSTEM_DEPENDENT
-
-int  nodie(),
-     Control_C(),
-     video(),
-     statusline(),
-     Zvideo(),
-     Zsline(),
-     Zreset_video(),
-     AddName();
-
-char *gcdir(),
-
-AN_UNSIGNED interpret();
-
-long milliTimeSince(),
-     timeSince(),
-     dostounix();
-
-#ifdef CONFIGURE
-
-char *getcwd();
-
-#endif
-
-#endif
-
-#endif

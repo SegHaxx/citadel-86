@@ -47,8 +47,6 @@ typedef struct {
     SharedRoomData *room;
 } TempData;
 
-#ifdef ANSI_PROTOTYPING
-
 TempData *SetNtoVList(int roomNo, int VNo);
 
 void ConNorVa(void);
@@ -85,7 +83,5 @@ void splitIt(char *format, ...);
 int NEUtilGetch(void);
 int UtilGetch(void);
 int Add2Room(label NewName);
-
-#endif
 
 #endif
