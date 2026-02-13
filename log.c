@@ -173,17 +173,11 @@ int DoAllQuestion(char *posprompt, char *negprompt)
  *
  * This is the menu-level routine to log someone in.
  */
-void login(char *password)
-{
+void login(char* name,char* password){
 	extern OptValues Opt;
 	int  foundIt;
-	label name;
 	TwoNumbers *tmp;
 
-	if (cfg.BoolFlags.ParanoidLogin) {
-		if (strlen(password))
-			getNormStr("account name", name, NAMESIZE, 0);
-	}
 	foundIt =    ((PWSlot(password, /*load = */TRUE)) != ERROR);
 	pwChangeCount = 1;
 

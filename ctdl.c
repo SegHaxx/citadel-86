@@ -624,25 +624,30 @@ char doKnown(char expand)
  *
  * This function handles the L(ogin) command.
  */
-char doLogin(char moreYet)
-{
-    label passWord;
+char doLogin(char moreYet){
+	label name,passWord;
 
-    if (!moreYet)   mPrintf("\n");
-    if (loggedIn)   {
-	mPrintf("\n ?Already logged in!\n ");
+	if(!moreYet) mPrintf("\n");
+	if(loggedIn){
+		mPrintf("\n ?Already logged in!\n ");
+		return GOOD_SELECT;
+	}
+
+	if (cfg.BoolFlags.ParanoidLogin) {
+			getNormStr("account name", name, NAMESIZE, 0);
+	}
+	if(!strlen(name)) return GOOD_SELECT;
+
+	echo=CALLER;
+	if (getNormStr(moreYet ? "" : " password (just carriage return if new)",
+				passWord, NAMESIZE, (moreYet) ? BS_VALID : NO_ECHO) ==
+			BACKED_OUT) {
+		return BACKED_OUT;
+	}
+
+	echo=BOTH;
+	login(name,passWord);
 	return GOOD_SELECT;
-    }
-    echo	= CALLER;
-    if (getNormStr(moreYet ? "" : " password (just carriage return if new)",
-			passWord, NAMESIZE, (moreYet) ? BS_VALID : NO_ECHO) ==
-							BACKED_OUT) {
-	return BACKED_OUT;
-    }
-
-    echo	= BOTH;
-    login(passWord);
-    return GOOD_SELECT;
 }
 
 #define LOGOUT_OPTS	\
