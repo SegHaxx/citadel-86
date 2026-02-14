@@ -883,7 +883,7 @@ void VideoInit()
 
     straight = FALSE;
     if (cfg.DepData.OldVideo) return;
-    sprintf(work, "Citadel-86 V%s: ", VERSION);
+    sprintf(work, VARIANT_NAME " V%s", VERSION);
     video(work);
     ScrNewUser();
 }
