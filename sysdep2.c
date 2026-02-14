@@ -938,7 +938,7 @@ void VideoInit()
 
     straight = FALSE;
     if (cfg.DepData.OldVideo) return;
-    sprintf(work, "Citadel-86 V%s: ", VERSION);
+    sprintf(work, "Citadel-86 V%s", VERSION);
     video(work);
     ScrNewUser();
 }

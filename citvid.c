@@ -24,16 +24,16 @@ void video ( char *tagline ) {
    vtop = 0;
    vatt = (ScrColors->ScrBack << 4) + ScrColors->ScrFore;
    vsetup ();
-   vlocate ( 1, 0 );
+   vlocate ( 0, 0 );
 
    vatt = (ScrColors->StatBack << 4) + ScrColors->StatFore;
    for ( k = 0; k < 80; k++ )
       vputch ( ' ' );
-   vlocate ( 1, 0 );
+   vlocate ( 0, 0 );
    vputs ( tagline );
    vlocate ( 24, 0 );
    vatt = (ScrColors->ScrBack << 4) + ScrColors->ScrFore;
-   vtop = 2;
+   vtop = 1;
 }
 
 void vsetmode ( byte mode ) {
@@ -159,11 +159,11 @@ void statusline ( char *string ) {
 	orow = vrow;
    int k;
 
-   vlocate ( 1, vwherey );
+   vlocate ( 0, vwherey );
       vatt = (ScrColors->StatBack << 4) + ScrColors->StatFore;
 	 for ( k = vwherey; k < 80; k++ )
 	    vputch ( ' ' );
-	 vlocate ( 1, vwherey );
+	 vlocate ( 0, vwherey );
 	 vputs ( string );
       vatt = (ScrColors->ScrBack << 4) + ScrColors->ScrFore;
    vlocate ( orow, ocol );
