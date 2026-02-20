@@ -338,28 +338,26 @@ void mHangUp()
     outportb(cfg.DepData.mdm_ctrl, ModemCtrl);
 }
 
-void SetBaudTo(int x)
-{
-    static struct BaudInfo {
-	int latch1;
-	int latch2;
-    } baud[] = {
-	{ 0x80, 1 },		/* 300  */
-	{ 0x60, 0 },		/* 1200 */
-	{ 0x30, 0 },		/* 2400 */
-	{ 0x18, 0 },		/* 4800 */
-	{ 0x0c, 0 },		/* 9600 */
-	{ 0x08, 0 },		/* 14,400 */
-	{ 0x06, 0 },		/* 19,200 */
-	{ 0x03, 0 },		/* 38,400 */
-	{ 0x02, 0 },		/* 56,800 */
-    };
-
-    outportb(cfg.DepData.ln_ctrl, 0x83);
-    outportb(cfg.DepData.modem_data, baud[x].latch1);
-    outportb(cfg.DepData.ier, baud[x].latch2);
-    outportb(cfg.DepData.mdm_ctrl, 1);
-    outportb(cfg.DepData.ln_ctrl, 0x03);
+void SetBaudTo(int x){
+	static struct BaudInfo{
+		unsigned char lsb,msb;
+	}divisor[]={
+		{ 0x80, 1 }, /*     300 */
+		{ 0x60, 0 }, /*    1200 */
+		{ 0x30, 0 }, /*    2400 */
+		{ 0x18, 0 }, /*    4800 */
+		{ 0x0c, 0 }, /*    9600 */
+		{ 0x08, 0 }, /*  14,400 */
+		{ 0x06, 0 }, /*  19,200 */
+		{ 0x03, 0 }, /*  38,400 */
+		{ 0x02, 0 }, /*  57,600 */
+		{ 0x01, 0 }, /* 115,200 */
+	};
+	outportb(cfg.DepData.ln_ctrl,    0x83);
+	outportb(cfg.DepData.ier,        divisor[x].msb);
+	outportb(cfg.DepData.modem_data, divisor[x].lsb);
+	outportb(cfg.DepData.mdm_ctrl,   1);
+	outportb(cfg.DepData.ln_ctrl,    0x03);
 }
 
 extern ScreenMap *ScrColors;

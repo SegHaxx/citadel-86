@@ -73,8 +73,8 @@
 5=../14.4\n\
 6=../19.2\n\
 7=../38.4\n\
-8=../56.8\n"
-
+8=../57.6\n\
+9=../115.2\n"
 
 struct GenList {
     char *GenName;
@@ -434,7 +434,7 @@ main(int argc, char **argv)
 		cfg.ArchiveWidth = arg;
 	    } else if (strcmp(var, "#SYSBAUD"   )    == SAMESTRING) {
 		cfg.sysBaud   = arg;
-		if (arg > 8 || arg < 0) {
+		if (arg > 9 || arg < 0) {
 		    illegal(BAUDS);
 		}
 	    } else if (strcmp(var, "#event"    ) == SAMESTRING) {
