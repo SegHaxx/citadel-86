@@ -713,23 +713,7 @@ char doCR()
 			/* Kludge alert!  Kludge alert! */
 			/* We don't have to check TransProtocol, though. */
 		if (DirAlign != 0 && termWidth > 22) {
-#ifndef TURBO_C_VSPRINTF_BUG
 			mPrintf("%*c%c ", DirAlign, ' ', AlignChar);
-#else
-	/* SUPER YUCKY! */
-			crtColumn += DirAlign + 1;
-			for (i = 0; i < DirAlign; i++) {
-				mputChar(' ');
-				if (haveCarrier)
-					(*Table[TransProtocol].method)(' ');
-			}
-			mputChar(AlignChar);
-			mputChar(' ');
-			if (haveCarrier) {
-				(*Table[TransProtocol].method)(AlignChar);
-				(*Table[TransProtocol].method)(' ');
-	    }
-#endif
 		}
 	}
 	prevChar    = ' ';
