@@ -80,14 +80,8 @@ void ShowVerbose(DirEntry *file)
 
     found = FindFileComment(file->unambig, TRUE);
 
-#ifndef TURBO_C_VSPRINTF_BUG
     mPrintf("%-*s%7s ", MAX_FILENAME + 2, file->unambig,
         PrintPretty(file->FileSize, work));
-#else
-    mPrintf("%s", file->unambig);
-    SpaceBug(MAX_FILENAME + 2 - strLen(file->unambig));
-    mPrintf("%7s ", PrintPretty(file->FileSize, work));
-#endif
 
     format = CompressType(file->unambig);
     if (logBuf.lbflags.ALT_RE) {

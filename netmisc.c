@@ -785,17 +785,10 @@ void writeNet(char idsAlso, char LocalOnly)
 		/* mPrintf("%-22s", netBuf.netName); */
 		mPrintf("%s", netBuf.netName);
 		if (idsAlso) {
-#ifdef TURBO_C_VSPRINTF_BUG
-		    SpaceBug(22 - strlen(netBuf.netName));   /* EEEESH */
-		    mPrintf("%-22s%-16s%-12s", netBuf.netId,
-			(needToCall(rover, ALL_NETS)) ? "<need to call>" : "",
-			SupportedBauds[netBuf.baudCode]);
-#else
 		    mPrintf("%*c%-22s%-16s%-12s", 22 - strlen(netBuf.netName),
 			' ', netBuf.netId,
 			(needToCall(rover, ALL_NETS)) ? "<need to call>" : "",
 			SupportedBauds[netBuf.baudCode]);
-#endif
 		    if (netBuf.nbflags.OtherNet) mPrintf("O");
 		    else if (!(netBuf.MemberNets & ALL_NETS))
 			mPrintf("d");
@@ -815,11 +808,7 @@ void writeNet(char idsAlso, char LocalOnly)
 			doCR();
 		    }
 		    else {
-#ifdef TURBO_C_VSPRINTF_BUG
-			SpaceBug(28 - (len + strlen(netBuf.netName)));   /* EEEESH */
-#else
 			mPrintf("%*c", 28 - (len + strlen(netBuf.netName)), ' ');
-#endif
 		    }
 		}
 	    }

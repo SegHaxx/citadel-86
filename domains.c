@@ -239,11 +239,7 @@ void WriteDomainContents()
 		    doCR();
 		}
 		else {
-#ifdef TURBO_C_VSPRINTF_BUG
-		    SpaceBug(28 - strLen(line));   /* EEEESH */
-#else
 		    mPrintf("%*c", 28 - strLen(line), ' ');
-#endif
 		}
 	    }
 	}

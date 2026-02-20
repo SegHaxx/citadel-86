@@ -39,7 +39,6 @@
 #include "citcolor.h"
 
 #define ANSI_PROTOTYPING
-#define TURBO_C_VSPRINTF_BUG
 
 #endif
 

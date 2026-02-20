@@ -968,22 +968,6 @@ int WhatDay()
 }
 
 /*
- * SpaceBug()
- *
- * Grungy code for working around a bug in Turbo C.
- */
-void SpaceBug(int x)
-{
-	char buf[100];
-
-	if (x < sizeof buf) {
-		setmem(buf, x, ' ');
-		buf[x] = 0;
-		mFormat(buf, oChar, doCR);
-	}
-}
-
-/*
  * AbsToReadable()
  *
  * This will return a human string representing that date.

@@ -101,12 +101,7 @@ void DisplayCC(char *d, int where)
     extern FILE *upfd;
 
     if (where == SCREEN) {
-#ifndef TURBO_C_VSPRINTF_BUG
 	mPrintf("%*c%s\n ", (CCfirst) ? 1 : 17, ' ', d);
-#else
-	SpaceBug((CCfirst) ? 1 : 17); /* sigh */
-	mPrintf("%s\n ", d);
-#endif
     }
     else if (where == MSGBASE)
 	dPrintf("W%s", d);
