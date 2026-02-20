@@ -190,19 +190,15 @@ void login(struct ACCT* acct){
 		loggedIn     = TRUE;
 		setUp(TRUE);
 
-lcd(1);
 		/* recite caller's name, etc:    */
 		mPrintf(" %s\n", logBuf.lbname);
 
 		if (!NoLoginSignal() && SearchList(&ChatOn, logBuf.lbname))
 			CallChat(1, FALSE);
 
-lcd(2);
 		if (RunAutoDoor(CheckAutoDoor(logBuf.lbname), FALSE)) return;
-lcd(3);
 
 		ScrNewUser();
-lcd(4);
 		printHelp("notice.pre", HELP_NO_HELP|HELP_LEAVE_PAGEABLE);
 		if (!printHelp("notice", HELP_USE_BANNERS |
 					HELP_NO_HELP|HELP_LEAVE_PAGEABLE))
@@ -211,17 +207,14 @@ lcd(4);
 		printHelp("notice.sfx", HELP_NO_HELP|HELP_LEAVE_PAGEABLE);
 
 		logMessage(L_IN, 0l, 0);
-lcd(5);
 
 		zero_struct(Opt);
 		Opt.Date = -1l;
 		Opt.MaxMessagesToShow = -1;
 		showMessages(MSG_LEAVE_PAGEABLE | PAGEABLE | NEWoNLY,
 			logBuf.lastvisit[thisRoom], OptionValidate);
-lcd(6);
 
 		listRooms(expert ? INT_EXPERT : INT_NOVICE);
-lcd(7);
 		if (shownHidden && !expert)
 			mPrintf("\n \n * => hidden room\n ");
 
@@ -242,7 +235,6 @@ lcd(7);
 		}
 		else free(tmp);
 
-lcd(8);
 		outFlag = OUTOK;
 		if (thisRoom != MAILROOM && RoomHasNew(MAILROOM)) {
 			mPrintf("\n  * You have private mail in Mail> *\n ");
@@ -253,7 +245,6 @@ lcd(8);
 			DiskHeld = TRUE;
 			mPrintf(HAVE_HELD);
 		}
-lcd(9);
 	} else {
 		setUp(FALSE);
 		/* discourage password-guessing: */
