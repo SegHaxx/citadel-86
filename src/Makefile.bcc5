@@ -60,7 +60,6 @@ confg.lib: confg.obj confg2.obj syscfg.obj info.obj mailfwd.obj \
 		virt.obj libroom.obj libcryp.obj libtabl.obj liblog.obj
 
 ctdl.lib: $(PORT) sysdep2.obj sysdep1.obj events.obj citvid.obj sysarc.obj \
-	splitf.obj syszm.obj sysdoor.obj sysibm.obj sysedit.obj syszibm.obj \
-	$(CTDLNET)
+	splitf.obj syszm.obj sysdoor.obj sysibm.obj sysedit.obj syszibm.obj
 
 -include .depend

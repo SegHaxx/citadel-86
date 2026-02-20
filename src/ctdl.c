@@ -53,7 +53,6 @@
  *	doUngoto()		handles U(ngoto)	command
  *	getCommand()		prints prompt and gets command char
  *	greeting()		System-entry blurb etc
- *	main()			has the central menu code
  */
 
 char   ExitToMsdos = FALSE;     /* True when time to bring system down  */
@@ -233,7 +232,9 @@ char doAide(char moreYet, char first)
 		aideMessage(NULL, /* noteDeletedMessage == */ FALSE);
 	
 		KillInfo(roomBuf.rbname);
+#if 0
 		KillSharedRoom(thisRoom);
+#endif
 		KillData(&DirBase, NtoStrInit(thisRoom, "", 0, TRUE));
 		WriteAList(&DirBase, "ctdldir.sys", WrtNtoStr);
 		roomBuf.rbflags.INUSE = FALSE;
@@ -307,7 +308,10 @@ char doEnter(char moreYet, char first)
     char what;			/* one of above seven */
     SListBase  ESelects = { NULL, FindSelect, NULL, NoFree, NULL };
     char *EnterOpts[] = {
-	TERM "\r", TERM "\n", NTERM "Xmodem", NTERM "Ymodem",
+	TERM "\r", TERM "\n", NTERM "Xmodem",
+#if 0
+	NTERM "Ymodem",
+#endif
 #ifdef WXMODEM_AVAILABLE
 	NTERM "Wxmodem",
 #endif
@@ -354,16 +358,11 @@ char doEnter(char moreYet, char first)
 	    case '\n':
 		break;
 #ifdef WXMODEM_AVAILABLE
-	    case 'X':
-	    case 'Y':
-	    case 'W':
-		Protocol = (*letter == 'Y') ? YMDM : (*letter == 'X') ? XMDM : WXMDM;
-		break;
-#else
-	    case 'X':
-	    case 'Y':
-		Protocol = (*letter == 'Y') ? YMDM : XMDM;
-		break;
+	    case 'W': Protocol=WXMDM; break;
+#endif
+	    case 'X': Protocol=XMDM; break;
+#if 0
+	    case 'Y': Protocol=YMDM; break;
 #endif
 	    case 'F':
 		if (Protocol == ASCII) {
@@ -443,7 +442,7 @@ char doEnter(char moreYet, char first)
 	case ROOM	:   makeRoom()		;	break;
 	case ENTERFILE	:   upLoad(Protocol)	;	break;
 	case CONTINUED	:   hldMessage(FALSE)	;	break;
-	case NETWORK	:   netMessage(Protocol);	break;
+	case NETWORK	:   /* netMessage(Protocol); */	break;
 	case OR_UPLOAD	:   OR_Upload(Reader, Protocol);	break;
 	}
 	echo = BOTH;
@@ -832,10 +831,13 @@ char doRead(char moreYet, char first)
 		TERM "Forward", NTERM "Global", NTERM "Local-only", TERM "New",
 		TERM "Old-reverse", TERM "Reverse", TERM "Status\n",
 		NTERM "Xmodem", NTERM "More",
+#if 0
+		NTERM "Ymodem",
+#endif
 #ifdef WXMODEM_AVAILABLE
 		NTERM "Wxmodem",
 #endif
-		NTERM "Ymodem", NTERM "User", NTERM "Phrase",
+		NTERM "User", NTERM "Phrase",
 		/* these two are here rather than optional due to .RGE/.RGD */
 		TERM "Directory", TERM "Extended-directory", " ", " ", " ", " ",
 		" ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ",
@@ -992,17 +994,11 @@ commondate:
 		bit_flags |= STATUS_BF;
 		break;
 #ifdef WXMODEM_AVAILABLE
-	    case 'X':
-	    case 'W':
-	    case 'Y':
-		protocol    = (*letter == 'W') ? WXMDM :
-					(*letter == 'X') ? XMDM : YMDM;
-		break;
-#else
-	    case 'X':
-	    case 'Y':
-		protocol    = (*letter == 'X') ? XMDM : YMDM;
-		break;
+	    case 'W': protocol=WXMDM; break;
+#endif
+	    case 'X': protocol=XMDM; break;
+#if 0
+	    case 'Y': protocol=YMDM; break;
 #endif
 	    case 'B':
 	    case 'T':
@@ -1709,11 +1705,13 @@ These must be modified for the windows interface before next use!
 	    exitValue   = (remoteSysop && !onConsole) ? REMOTE_SYSOP_EXIT : SYSOP_EXIT;
 	    CloseSysopMenu(id);
 	    return GOOD_SELECT;
+#if 0
 	case 'N':
 	    CloseSysopMenu(id);
 	    netStuff();
 	    id = RegisterSysopMenu("ctdlopt.mnu", CtdlOpts, " Privileged Functions ", 0);
 	    break;
+#endif
 	case 'R':
 	    if (gotCarrier()) HangUp(TRUE);
 	    Reinitialize();
@@ -1799,8 +1797,10 @@ char getCommand(char *c, char bs)
 			/* catch a late Pause, et al, command */
 	else if (*c == 'P' || *c == '\b') again = TRUE;
 	else if (*c == 7) {
+#if 0
 	    if (CheckForSpecial(13, 69))
 		netController(0, 0, NO_NETS, ANY_CALL, 0);
+#endif
 	}
 	/* else oChar(*c); -- actually, handled somewhere else! */
 	bs = FALSE;
@@ -1859,9 +1859,11 @@ void greeting()
     setUp(TRUE);
 
     PrintBanner = FALSE;
+#if 0
     if (outFlag == NET_CALL) {
 	netController(0, 0, NO_NETS, ANY_CALL, 0);   /* so we don't call out */
     }
+#endif
 #ifdef STROLL_SUPPORT
     else if (outFlag == STROLL_DETECTED) {
 	StrollIt();
@@ -1887,21 +1889,26 @@ int cdecl main(int argc,char** argv){
 
     while (argc >= 2) {
 	argc--;
+#if 0
 	if (strCmpU(argv[argc], "+netlog") == SAMESTRING) {
 	    logNetResults = TRUE;
-	} else if (strncmp(argv[argc], "pgdft=", 6) == SAMESTRING) {
-	    set_default_page_length(atoi(argv[argc]+6));
+	} else
+#endif
+	if (strncmp(argv[argc], "pgdft=", 6) == SAMESTRING) {
+		set_default_page_length(atoi(argv[argc]+6));
 	} else if (strncmp(argv[argc], "mp=", 3) == SAMESTRING) {
 	    if (strlen(argv[argc] + 3) < 15)
 		strcpy(more, argv[argc] + 3);
 	} else if (strncmp(argv[argc], "bps=", 4) == SAMESTRING) {
 	    BpsSet = TRUE;
 	    ReadBps(argv[argc]);
+#if 0
 	} else if (strCmpU(argv[argc], "+localareacode") == SAMESTRING) {
 	    LocalAreaCode++;
 	} else if (strCmpU(argv[argc], "+netdebug") == SAMESTRING) {
 /*	    printf("netdebug is on\n"); */
 	    netDebug = TRUE;
+#endif
 	} else if (strCmpU(argv[argc], "+nochat") == SAMESTRING) {
 	    NoChatAtAll = TRUE;
 	} else if (strCmpU(argv[argc], "+noecho") == SAMESTRING) {
@@ -1913,8 +1920,10 @@ int cdecl main(int argc,char** argv){
 	    printf("This version of %s does not support Wxmodem\n",
 							VARIANT_NAME);
 #endif
+#if 0
 	} else if (strCmpU(argv[argc], "+vortex") == SAMESTRING) {
 	    VortexHandle = TRUE;
+#endif
 	} else if (strCmpU(argv[argc], "+vandaloff") == SAMESTRING) {
 	    DisVandals = TRUE;
 	} else if (strCmpU(argv[argc], "+conpwd") == SAMESTRING) {
@@ -2140,9 +2149,11 @@ void UserAdmin(logBuffer *lBuf)
 		DoorPriv = lBuf->lbflags.DOOR_PRIVS;
 	    }
 	    break;
+#if 0
 	case 'N':
 	    NetPrivs(who);
 	    break;
+#endif
 	case 'A':
 	    CloseSysopMenu(id);
 	    newUser(&logTmp);

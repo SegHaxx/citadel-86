@@ -171,8 +171,10 @@ wait1:
 		count++;
 		if (count % 1000) { /* every 10000 cycles do a timeout check */
 			if (timeSince(&timeout) > 60 /* seconds */) {
+#if 0
 				if (inNet != NON_NET)
 					killConnection("wp");
+#endif
 				printf("Timeout in waitPutch, other side unresponsive.\n");
 				return FALSE;
 			}

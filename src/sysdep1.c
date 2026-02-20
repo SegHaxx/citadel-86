@@ -684,6 +684,7 @@ long sysRoomLeft()
     return (minimum(temp - netBytes, temp2));
 }
 
+#if 0
 /*
  * sysSendFiles()
  *
@@ -729,6 +730,7 @@ void sysSendFiles(struct fl_send *sendWhat)
 	wildCard(netSendFile, mask, "", WC_NO_COMMENTS);
     homeSpace();
 }
+#endif
 
 /*
  * MakeDomainDirectory()
@@ -826,11 +828,13 @@ UNS_32 FindBaud()
 	if (noGood == NO_GOOD)
 	    baudRunner = (baudRunner + 1) % (cfg.sysBaud + 1);
     }
+#if 0
     if (noGood == NET_CAUGHT) {
 	LastBaudIndex = baudRunner;
 	netController(0, 0, NO_NETS, ANY_CALL, 0);
 	return -1l;       /* pretend nothing happened */
     }
+#endif
 #ifdef STROLL_SUPPORTED
     if (noGood == STROLL_CAUGHT) {
 	LastBaudIndex = baudRunner;
@@ -988,6 +992,7 @@ void CheckForFax()
 	}
 }
 
+#if 0
 /*
  * getNetBaud()
  *
@@ -1061,6 +1066,7 @@ char getNetBaud()
     killConnection("gnb");
     return FALSE;
 }
+#endif
 
 /*
  * Section 3.3. CONSOLE HANDLING:

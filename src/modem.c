@@ -199,8 +199,10 @@ extern char	prevChar;	/* previous char	*/
 extern char	outFlag;	/* output flag	*/
 extern char	ExitToMsdos;	/* Kill program flag	*/
 		/* net stuff vars should go here */
-extern char	inNet;
-extern FILE	*netLog;
+//extern char	inNet;
+char		inNet = NON_NET;
+//extern FILE	*netLog;
+FILE		*netLog;
 extern FILE	*strollfd;
 		/* bloooooop! */
 
@@ -1771,6 +1773,7 @@ splitF(netLog, "Sending EOT\n");
     return TRAN_FAILURE;
 }
 
+#if 0
 /*
  * YMHdr()
  *
@@ -1801,6 +1804,7 @@ int YMHdr(long fileSize, char *filename)
 
     return TrError == TRAN_SUCCESS;
 }
+#endif
 
 #ifdef NEED_NET_DEBUG_ERRORS
 void DumpToFile(int LastReceived, int BufSize, CRC_TYPE tc, CRC_TYPE oc)

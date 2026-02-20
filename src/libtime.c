@@ -51,6 +51,7 @@ char  *monthTab[13] = {"", "Jan", "Feb", "Mar",
 			   "Jul", "Aug", "Sep",
 			   "Oct", "Nov", "Dec" };
 
+#if 0
 // This will return a human string representing that date.
 char* AbsToReadable(unsigned long lastdate){
     struct tm* data;
@@ -68,6 +69,7 @@ char* AbsToReadable(unsigned long lastdate){
 			data->tm_mday, data->tm_hour, data->tm_min, m);
     return buffer;
 }
+#endif
 
 // Format a Citadel standard date string
 static void CitaDate(char* str,int y,int m,int d){

@@ -411,7 +411,9 @@ int initCitadel(void){
 	initRoomBuf(&roomBuf);
 	initNetBuf(&netBuf);
 	initNetBuf(&netTemp);
+#if 0
 	initSharedRooms(FALSE);
+#endif
 	initTransfers();
 	ReadCitInfo();
 	lPtrTab = (MSG_NUMBER *) GetDynamic(MAXROOMS * sizeof (MSG_NUMBER));
@@ -456,12 +458,14 @@ int initCitadel(void){
 	makeSysName(tempName, "ctdlmodr.sys", &cfg.roomArea);
 	MakeList(&Moderators, tempName, NULL);
 
+#if 0
 	if (cfg.BoolFlags.netParticipant) {
 		makeSysName(tempName, "ctdlnet.sys", &cfg.netArea);
 		openFile(tempName, &netfl);
 		NetInit();
 		OpenForwarding();
 	}
+#endif
 
 	getRoom(LOBBY);     /* load Lobby>  */
 

@@ -101,7 +101,7 @@ extern NetBuffer netBuf, netTemp;
 extern FILE	 *upfd;
 
 extern int	 thisRoom;	/* Current room		*/
-extern int	 thisNet;	/* Current node in use	  */
+//extern int	 thisNet;	/* Current node in use	  */
 extern int	 thisLog;	/* Current log position	 */
 extern int	 outPut;
 extern NetTable  *netTab;
@@ -156,6 +156,7 @@ void aideMessage(char *name, char noteDeletedMessage)
     getRoom(ourRoom);
 }
 
+#if 0
 /*
  * canRespond()
  *
@@ -232,6 +233,7 @@ char canRespond()
 
 	return FALSE;
 }
+#endif
 
 /*
  * deleteMessage()
@@ -731,6 +733,7 @@ char getRecipient()
 		if (strlen(msgBuf.mbto) == 0) return FALSE;
 	}
 
+#if 0
 	switch (SepNameSystem(msgBuf.mbto, person, msgBuf.mbaddr, &netBuf)) {
 	case IS_SYSTEM:
 		if (!NetValidate(TRUE) || !netInfo(FALSE)) return FALSE;
@@ -743,6 +746,7 @@ char getRecipient()
 	case SYSTEM_IS_US:
 		return FALSE;
 	}
+#endif
 
 	if (!msgBuf.mbaddr[0]) {
 		if (strCmpU(msgBuf.mbto, logBuf.lbname) == SAMESTRING) {
@@ -830,10 +834,12 @@ char hldMessage(char IsReply)
 
     if (roomTab[thisRoom].rtflags.SHARED == 0)
 	msgBuf.mboname[0] = 0;
+#if 0
     else if (loggedIn && roomBuf.rbflags.SHARED &&
 	     roomBuf.rbflags.AUTO_NET &&
 	     (roomBuf.rbflags.ALL_NET || logBuf.lbflags.NET_PRIVS))
 	netInfo(TRUE);
+#endif
 
 	/*
 	 * this indicates the user did a .eh in Mail> and
@@ -862,10 +868,12 @@ int makeMessage(char uploading)
     if (!loggedIn && AnonMsgCount > 1)
 	return FALSE;
 
+#if 0
     if (loggedIn && roomBuf.rbflags.SHARED &&
 	    roomBuf.rbflags.AUTO_NET &&
 	    (roomBuf.rbflags.ALL_NET || logBuf.lbflags.NET_PRIVS))
 	return netMessage(uploading);
+#endif
     
     ZeroMsgBuffer(&msgBuf);
     return procMessage(uploading, FALSE);
@@ -941,6 +949,27 @@ int procMessage(char uploading, char IsReply)
 		return SaveMessage(IsReply);
 	}
 	return FALSE;
+}
+
+/*
+ * DiscardMessage()
+ *
+ * This function prints a message to a discard file.
+ */
+void DiscardMessage(char *name, char *filename)
+{
+    if (redirect(filename, APPEND_TO)) {
+	if (strlen(name)) {
+	    fprintf(upfd, "%s\n", name);
+	    mPrintf("%s", formHeader(TRUE));
+	}
+	else mPrintf("%s (%s)", formHeader(TRUE), msgBuf.mbsrcId);
+	doCR();
+	mFormat(msgBuf.mbtext, oChar, doCR);
+	doCR();
+	doCR();
+	undirect();
+    }
 }
 
 int SaveMessage(char IsReply)
@@ -1080,12 +1109,14 @@ static char moveMessage(char which, int m, char *toReturn)
     putRoom(thisRoom);
     noteRoom();
 
+#if 0
     /* is message is going to a shared room ... */
     if (roomBuf.rbflags.SHARED) {
 	/* if message was originally netted or if aide wants message shared */
 	if (strlen(msgBuf.mboname) != 0 || getYesNo(MAKE_NETTED))
 	    MakeNetted(MSGSPERRM - 1, TRUE);
     }
+#endif
 
     getRoom(ourRoom);
     strCpy(tempauth, msgBuf.mbauth);
@@ -1207,6 +1238,7 @@ void msgToDisk(char *filename, char all, MSG_NUMBER id, SECTOR_ID loc,
     free(fn);
 }
 
+#if 0
 /*
  * AddNetMail()
  *
@@ -1301,6 +1333,7 @@ static void NetForwarding(logBuffer *lBuf)
 	free(system);
     }
 }
+#endif
 
 /*
  * MailWork()
@@ -1329,7 +1362,7 @@ static void MailWork(int slot)
 	if (strCmpU(cfg.SysopName, logTmp.lbname) == SAMESTRING)
 		ArchiveMail = TRUE;
 
-	NetForwarding(&logTmp);
+	//NetForwarding(&logTmp);
 
 	putLog(&logTmp, slot);
 
@@ -1360,8 +1393,12 @@ static void AddMail(char *DaPerson, int *fl)
     switch (SepNameSystem(DaPerson, person, system, &netBuf)) {
     case IS_SYSTEM:
     case SYSTEM_IS_US:
+#if 1
+		return;
+#else
 	if (!NetValidate(TRUE)) return;
 	AddNetMail(system, flags | CREDIT_SENDER);
+#endif
 	break;
     case BAD_FORMAT:
 	if (inNet == NON_NET) mPrintf(InternalError, DaPerson);
@@ -1454,6 +1491,7 @@ static void noteMessage(logBuffer *lBuf, UNS_16 flags)
 	else if (!(flags & SKIP_RECIPIENT)) {
 	    if (msgBuf.mbaddr[0] ||
 			strCmpU(msgBuf.mbto, lBuf->lbname) != SAMESTRING) {
+#if 0
 		/* kinda silly, but .. */
 
 	    if (msgBuf.mbaddr[0] && inNet == NON_NET) {
@@ -1496,8 +1534,9 @@ static void noteMessage(logBuffer *lBuf, UNS_16 flags)
 		}
 	    }
 	    else {
+#endif
 		AddMail(msgBuf.mbto, NULL);
-	    }
+//	    }
 	}
 
 	    if (inNet == NON_NET) {
@@ -1602,7 +1641,7 @@ static void LocalForwarding(int from, char *name, logBuffer *workBuf)
 	noteAMessage(workBuf->lbMail, MAILSLOTS, cfg.newest, cfg.catSector);
 
 	/* check the network forwarding for this account */
-	NetForwarding(workBuf);
+	//NetForwarding(workBuf);
 
 	putLog(workBuf, slot);
 	AddData(&FwdVortex, strdup(name), NULL, FALSE);
@@ -1721,7 +1760,7 @@ char pullIt(int m)
 	do {
 		outFlag = IMPERVIOUS;
 		PagingOff();
-		TellRoute();
+		//TellRoute();
 		mPrintf("\n <D>elete <M>ove <C>opy <A>bort");
 		if (net_status == 0)
 			mPrintf(" <N>et");
@@ -1746,7 +1785,11 @@ char pullIt(int m)
 		 * non-netted
 		 * .656
 		 */
+#if 1
+			break;
+#else
 			return MakeNetted(m, !msgBuf.mboname[0]);
+#endif 
 		}
 	} while (onLine());
 
@@ -1830,7 +1873,9 @@ char putMessage(logBuffer *lBuf, UNS_16 flags)
 		strCmp(msgBuf.mbaddr, NON_LOC_NET) != SAMESTRING))
 	    dPrintf("Q%s", wrNetId(msgBuf.mbaddr));
 	else	    /* saving a net message		 */
-	    dPrintf("Q%s%d", wrNetId(msgBuf.mbaddr), thisNet);
+	{
+	//dPrintf("Q%s%d", wrNetId(msgBuf.mbaddr), thisNet);
+	}
 
 	if (strCmpU(msgBuf.mbaddr, R_SH_MARK  ) == SAMESTRING ||
 			 strCmpU(msgBuf.mbaddr, NON_LOC_NET) == SAMESTRING)
@@ -1885,6 +1930,7 @@ void dLine(char *garp)
     while (*garp++);
 }
 
+#if 0
 /*
  * netMailOut()
  *
@@ -1992,6 +2038,7 @@ void MakeIntoRouteMail(int result, DOMAIN_FILE fn, char isdomain, char *system,
     }
     else DomainFileAddResult(domain, system, "", DOMAIN_SUCCESS);
 }
+#endif
 
 /*
  * putMsgChar()
@@ -2221,6 +2268,7 @@ int showMessages(int flags, MSG_NUMBER LastMsg, ValidateShowMsg_f_t *Style)
 			continue;	/* skip the increment - reprint msg */
 		    }
 
+#if 0
 		    if (
 			Showing == MSGS
 			&&
@@ -2261,8 +2309,9 @@ int showMessages(int flags, MSG_NUMBER LastMsg, ValidateShowMsg_f_t *Style)
 			    roomBuf.msg[i].rbmsgNo   |= (~S_MSG_MASK);
 			    logBuf.lbMail[i].rbmsgNo |= (~S_MSG_MASK);
 			}
-		    }
-		    else if (thisRoom == MAILROOM && (logBuf.lbMail[i].rbmsgNo & (~S_MSG_MASK))) {
+		    }else
+#endif
+		    if (thisRoom == MAILROOM && (logBuf.lbMail[i].rbmsgNo & (~S_MSG_MASK))) {
 			logBuf.lbMail[i].rbmsgNo &= S_MSG_MASK;
 		    }
 		}
@@ -2396,6 +2445,7 @@ void undirect()
     outPut = NORMAL;
 }
 
+#if 0
 #define UnknownRoute "\n Couldn't identify route (%s).", msgBuf.mbaddr
 /*
  * TellRoute()
@@ -2424,6 +2474,7 @@ void TellRoute()
 	    mPrintf(UnknownRoute);
     }
 }
+#endif
 
 /*
  * FindNextFile()

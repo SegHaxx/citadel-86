@@ -86,6 +86,8 @@ char    more[15] = "More";
 
 extern SListBase MailForward;
 
+#define YMHdr NULL
+
 PROTO_TABLE Table[] = {
 	{ "Ascii", 0, (IS_NUMEROUS | NEEDS_HDR), "ASCII", NULL, NULL, NULL,
 		/* sendAscii */ outMod, 1, AsciiHeader, NULL },
@@ -1046,6 +1048,13 @@ void download(int msgflags, char protocol, char global, int Compression,
 }
 
 /*
+ * DelFile()
+ *
+ * This function kills the named file.
+ */
+void DelFile(DirEntry *f){unlink(f->unambig);}
+
+/*
  * RmTempFiles()
  *
  * This function deletes all files in the specified directory, and then
@@ -1207,7 +1216,6 @@ char reconfigure()
     char  system[(2 * NAMESIZE) + 10];
     ForwardMail *address;
     int cost;
-    extern int thisNet;
     char *ConfgOpts[] = {
 	"Complete Reconfigure", "Expert\n", "Floor mode\n",
 	"Half-duplex mode\n", "Ignore Mail From User",
@@ -1231,6 +1239,7 @@ char reconfigure()
 
     switch (GetMenuChar()) {
     case '\b': mPrintf(" \b"); PushBack('\b'); return TRUE;
+#if 0
     case 'A':			/* Forwarding address on the network */
 	if (!ReqNodeName("system to forward Mail> to", alias, domain, RNN_ASK,
 			&netBuf) && onLine()) {	/* in case carrier is lost */
@@ -1260,6 +1269,7 @@ char reconfigure()
 	    }
 	}
 	break;
+#endif
     case 'M':
 	getString("Forward to which account", alias, NAMESIZE, 0);
 	if (strLen(alias) != 0) {
@@ -1680,9 +1690,7 @@ static void BuildReport(UploadFile *entry)
  *
  * Eat a line from a DSZ log file
  */
-static void *EatDSZFormat(char *line)
-{
-	extern int offline_mode;
+static void *EatDSZFormat(char *line){
 	char *arg, *tok;
 	int rover;
 	long size;
@@ -1703,7 +1711,7 @@ static void *EatDSZFormat(char *line)
 	else
 		arg++;
 
-	size = FileCommentUpdate(arg, TRUE, !offline_mode);
+	size = FileCommentUpdate(arg, TRUE, TRUE);
 	entry = GetDynamic(sizeof *entry);
 	entry->name = strdup(arg);
 	entry->size = size;

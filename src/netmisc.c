@@ -31,11 +31,9 @@ char		ErrBuf[100];		/* General buffer for error messages */
 
 int		AnyIndex = 0;  /* tracks who to call between net sessions */
 
-FILE		*netLog, *netMisc, *netMsg;
 static char     UsedNetMsg;
 char		*nMsgTemplate = "netMsg.$$$";
 char		logNetResults = FALSE;
-char		inNet = NON_NET;
 AN_UNSIGNED     RecBuf[SECTSIZE + 5];
 int		callSlot;
 label		normed, callerName, callerId;
@@ -375,27 +373,10 @@ char RecipientAvail(){
 }
 
 /*
- * DiscardMessage()
+ * callOut()
  *
- * This function prints a message to a discard file.
+ * This function attempts to call some other system.
  */
-void DiscardMessage(char *name, char *filename)
-{
-    if (redirect(filename, APPEND_TO)) {
-	if (strlen(name)) {
-	    fprintf(upfd, "%s\n", name);
-	    mPrintf("%s", formHeader(TRUE));
-	}
-	else mPrintf("%s (%s)", formHeader(TRUE), msgBuf.mbsrcId);
-	doCR();
-	mFormat(msgBuf.mbtext, oChar, doCR);
-	doCR();
-	doCR();
-	undirect();
-    }
-}
-
-// This function attempts to call some other system.
 static SystemCallRecord *callOut(int i){
 	SystemCallRecord *called;
 

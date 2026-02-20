@@ -440,6 +440,7 @@ char DoTimeouts()
 			Types[2].NextAbs < ThisAbsolute)
 	return FigureEvent(2);
 
+#if 0
     /* check priority mail -- odd place for the check, but wotthehell */
     if (PriorityMail) {
 	if (!onLine()) {
@@ -470,6 +471,7 @@ char DoTimeouts()
     if (!onLine() && GetFirst(&UntilNetSessions) != NULL) {
 	KillList(&UntilNetSessions);
     }
+#endif
 
     return ExitToMsdos;
 }
@@ -520,6 +522,7 @@ int FigureEvent(int index)
     CalcEnd = ThisAbs + (Cur->EvDur * 60l);
 
     switch (Cur->EvClass) {
+#if 0
     case CL_UNTIL_NET:
     case CLNET:
 	netController(Cur->EvMinutes % 1440, Cur->EvDur,
@@ -528,6 +531,7 @@ int FigureEvent(int index)
 			REPORT_FAILURE | LEISURELY);
 	startTimer(NEXT_ANYNET);
 	break;
+#endif
     case CLEXTERN:
 	ExitToMsdos = TRUE;
 	exitValue = (int) Cur->EvExitVal;
@@ -568,9 +572,11 @@ int FigureEvent(int index)
 	cfg.BoolFlags.unlogLoginOk = (Cur->EvClass == CL_NEWUSERS_ALLOWED);
 	EndIt = CalcEnd;
 	break;
+#if 0
     case CL_NETCACHE:
 	CacheMessages(Cur->EvExitVal, FALSE);
 	break;
+#endif
     default:	/* do nothing */
 	;       /* required by ANSI */
     }

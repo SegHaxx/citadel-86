@@ -1,4 +1,4 @@
-/c c0l confg confg2 syscfg info mailfwd shared virt dom-init dom-data slist
+/c c0l confg confg2 syscfg info mailfwd shared virt dom-init dom-data slist libroom libcryp libtabl liblog
 confg
 
-cn tools emu mathl cl
+cn tools cl

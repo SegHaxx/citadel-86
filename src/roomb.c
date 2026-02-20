@@ -76,7 +76,8 @@ extern MessageBuffer   msgBuf;	/* Message buffer */
 extern MessageBuffer   tempMess;	/* For held messages */
 extern logBuffer logBuf;	/* Person buffer */
 extern logBuffer logTmp;	/* Person buffer */
-extern NetBuffer netBuf;
+//extern NetBuffer netBuf;
+NetBuffer	 netBuf;
 extern SListBase  Moderators;
 extern int  masterCount, thisRoom, thisLog;
 extern char remoteSysop;
@@ -135,9 +136,11 @@ static int editText(char *buf, int lim, char MsgEntryType, char *entry)
 	ExtraOption(OtherEdit, "Insert paragraph break\n");
 	if (thisRoom == MAILROOM && loggedIn)
 	    ExtraOption(OtherEdit, "Who else\n");
+#if 0
 	if (NetValidate(FALSE) && (thisRoom == MAILROOM || 
 							roomBuf.rbflags.SHARED))
 	    ExtraOption(OtherEdit, "N");
+#endif
     }
     else if (MsgEntryType == INFO_ENTRY || MsgEntryType == BIO_ENTRY) {
 	ExtraOption(OtherEdit, "Insert paragraph break\n");
@@ -197,6 +200,7 @@ static int editText(char *buf, int lim, char MsgEntryType, char *entry)
 	    replaceString(buf, lim, (letter != 'R'));
 	    break;
 	case 'S':
+#if 0
 	    if (MsgEntryType == MSG_ENTRY && roomBuf.rbflags.SHARED &&
 		cfg.BoolFlags.netParticipant &&
 		loggedIn &&
@@ -205,6 +209,7 @@ static int editText(char *buf, int lim, char MsgEntryType, char *entry)
 		if (getYesNo("Save as net message"))
 		    if (!netInfo(TRUE)) break;
 	    }
+#endif
 	    if (MsgEntryType == MSG_ENTRY && roomBuf.rbflags.ANON && loggedIn) {
 		if (!getYesNo("Save as anonymous message")) {
 		    msgBuf.mbdate[0] = 0;
@@ -242,6 +247,7 @@ static int editText(char *buf, int lim, char MsgEntryType, char *entry)
 	case 'O':
 	    OutsideEditor();
 	    break;
+#if 0
 	case 'N':
 	    NetworkSelected++;
 	    if (msgBuf.mbaddr[0]) {
@@ -264,6 +270,7 @@ static int editText(char *buf, int lim, char MsgEntryType, char *entry)
 		netInfo(TRUE);
 	    }
 	    break;
+#endif
 	default:
 		RunRemoteEditor(letter);
 	}
@@ -315,6 +322,7 @@ int OtherRecipients(char *name, int flags)
 	case NO_SYSTEM:
 	    mPrintf(nope, system); break;
 	case IS_SYSTEM:
+#if 0
 	    cost = (isdomain) ? FindCost(domain) : !netBuf.nbflags.local;
 	    if (logBuf.credit < cost) {
 		if (HalfSysop()) {
@@ -325,7 +333,9 @@ int OtherRecipients(char *name, int flags)
 		    break;
 		}
 	    }
-	    else if (!logBuf.lbflags.NET_PRIVS) {
+	    else if (!logBuf.lbflags.NET_PRIVS)
+#endif
+	    {
 		mPrintf("Sorry, you don't have network privileges.\n");
 		break;
 	    }
@@ -396,6 +406,9 @@ char SepNameSystem(char *string, char *person, char *system, NetBuffer *buf)
 
     if (buf == NULL) return IS_SYSTEM;	/* very minor cheat - see CTDL.C */
 
+#if 1
+	return SYSTEM_IS_US;
+#else
     if ((slot = searchNameNet(c, buf)) != ERROR) { /* try secondary lists */
 	strcpy(system, buf->netName);	/* get "real" name */
 	if (buf->nbflags.local || buf->nbflags.RouteLock) {
@@ -421,6 +434,7 @@ char SepNameSystem(char *string, char *person, char *system, NetBuffer *buf)
     }
 
     return (slot == ERROR) ? NO_SYSTEM : IS_SYSTEM;
+#endif
 }
 
 /*
@@ -948,6 +962,7 @@ static void NewGen(SharedRoomData *room, AN_UNSIGNED *gen){
 	}
 }
 
+#if 0
 /*
  * UpdateSharedForNewGen()
  *
@@ -1009,6 +1024,7 @@ static int killFromList(char *sysName, int arg){
     putNet(slot, &netBuf);
     return TRUE;
 }
+#endif
 
 /*
  * renameRoom()
@@ -1124,12 +1140,14 @@ char renameRoom(){
 		    break;
 		}
 		doCR();
+#if 0
 		getList(knownHosts,
 			"Systems that you will be a Backbone for",
 				NAMESIZE, FALSE, BACKBONE);
 		getList(knownHosts,
 			"Systems that should be returned to Peon status",
 				NAMESIZE, FALSE, PEON);
+#endif
 		break;
     	case 'M':
 		if (WhoIsModerator(workbuf)) {
@@ -1183,9 +1201,11 @@ char renameRoom(){
 		roomBuf.rbflags.PUBLIC = !getYesNo("Make room private");
 		if (!roomBuf.rbflags.PUBLIC) {
 		    if (getYesNo("Cause non-aide users to forget room")) {
+#if 0
 			if (roomBuf.rbflags.SHARED) {
 				UpdateSharedForNewGen((roomBuf.rbgen +1) % MAXGEN);
 			}
+#endif
 			roomBuf.rbgen = (roomBuf.rbgen +1) % MAXGEN;
 			logBuf.lbrgen[thisRoom] = roomBuf.rbgen;
 			roomTab[thisRoom].rtgen = roomBuf.rbgen;
@@ -1193,6 +1213,7 @@ char renameRoom(){
 		}
 		else roomBuf.rbflags.INVITE = FALSE;
 		break;
+#if 0
     	case 'S':
 		roomBuf.rbflags.SHARED = getYesNo("Network (shared) room");
 		if (roomBuf.rbflags.SHARED) {
@@ -1224,6 +1245,7 @@ char renameRoom(){
 		    KillSharedRoom(thisRoom);
 		}
 		break;
+#endif
     	case 'L':
 		getList(makeKnown, "Users to be invited", NAMESIZE, FALSE, 0);
 		break;
@@ -1243,9 +1265,11 @@ char renameRoom(){
 		{
 		    roomBuf.rbflags.PUBLIC = FALSE;
 		    if (getYesNo("Cause non-aide users to forget room")) {
+#if 0
 			if (roomBuf.rbflags.SHARED) {
 				UpdateSharedForNewGen((roomBuf.rbgen +1) % MAXGEN);
 			}
+#endif
 			roomBuf.rbgen = (roomBuf.rbgen +1) % MAXGEN;
 			logBuf.lbrgen[thisRoom] = roomBuf.rbgen;
 			roomTab[thisRoom].rtgen = roomBuf.rbgen;
@@ -1276,7 +1300,9 @@ char renameRoom(){
     noteRoom();
     putRoom(thisRoom);
 
+#if 0
     UpdateSharedRooms();
+#endif
 
     if (doAideMessage) {
 	ZeroMsgBuffer(&msgBuf);
@@ -1380,8 +1406,10 @@ char *formatSummary(char *buffer, char NotFinal)
     if (strLen(c = AskForNSMap(&Moderators, thisRoom)) != 0)
 	sprintf(lbyte(buffer), " (Moderator is %s)", c);
 
+#if 0
     if (roomBuf.rbflags.SHARED && NotFinal)
 	ParticipatingNodes(buffer);
+#endif
 
     return buffer;
 }
@@ -1506,6 +1534,7 @@ void initialArchive(char *fn)
     free(realfn);
 }
 
+#if 0
 /*
  * ListAsShared()
  *
@@ -1542,6 +1571,7 @@ SharedRoomData *searchForRoom(char *name)
     if (data.reason == FOUND) return data.room;
     return NULL;
 }
+#endif
 
 /*
  * getXString()
@@ -1620,6 +1650,7 @@ int doMakeWork(char *user, int val)
     return TRUE;
 }
 
+#if 0
 /*
  * CmnNetList()
  *
@@ -1643,6 +1674,7 @@ int CmnNetList(char *name, SharedRoomData **room, char ShouldBeThere,
     }
     return thisNet;
 }
+#endif
 
 /*
  * WritePrivs()

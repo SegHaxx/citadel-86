@@ -261,16 +261,6 @@ void ITL_Line(char *data)
 }
 
 /*
- * DelFile()
- *
- * This function kills the named file.
- */
-void DelFile(DirEntry *f)
-{
-    unlink(f->unambig);
-}
-
-/*
  * MapFileAccepted()
  *
  * This function is responsible for discovering if the map file is acceptable.

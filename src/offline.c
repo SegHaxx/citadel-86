@@ -222,10 +222,12 @@ int DropFile(int dir, char *tempdir)
  */
 char ORWriteMsg(int mode, int slot)
 {
+#if 0
 	if (OptionCheck(mode, slot)) {
 		prNetStyle(FALSE, getMsgChar, putFLChar, TRUE, "");
 		return TRUE;
 	}
+#endif
 	return FALSE;
 }
 
@@ -342,9 +344,9 @@ void OR_Upload(OfflineReader *Reader, char Protocol)
 		homeSpace();		/* in case the translator moved us */
 		if (OR_Result(useless)) {
 			MakeDeCompressedFilename(msgs, "msgs.cit", TDirBuffer);
-			if (AddNetMsgs(msgs, AddOffLineMsg, FALSE, -1, FALSE)==ERROR) {
+			//if (AddNetMsgs(msgs, AddOffLineMsg, FALSE, -1, FALSE)==ERROR) {
 				mPrintf("Could not open %s errno %d, upload aborted.\n ", name, errno);
-			}
+			//}
 		}
 	}
 
@@ -353,11 +355,12 @@ void OR_Upload(OfflineReader *Reader, char Protocol)
 	KillList(&FileList);
 }
 
-void AddOffLineMsg()
-{
+void AddOffLineMsg(){
+#if 0
 	if (roomBuf.rbflags.SHARED && logBuf.lbflags.NET_PRIVS &&
 					thisRoom != MAILROOM)
 		if (!netInfo(FALSE)) return;
+#endif
 	SaveMessage(FALSE);
 }
 

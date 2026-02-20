@@ -42,7 +42,6 @@
  *	illegal()		abort bottleneck
  *	msgInit()		sets up cfg.catChar, catSect etc.
  *	indexRooms()		build RAM index to ctdlroom.sys
- *	noteRoom()		enter room into RAM index	
  *	hash()			hashes a string to an integer
  *	logInit()		builds the RAM index to CTDLLOG.SYS
  *	noteLog()		enters a userlog record into RAM index
@@ -103,7 +102,6 @@ extern rTable    *roomTab;	      /* RAM index of rooms		*/
 extern aRoom     roomBuf;	       /* room buffer			*/
 extern EVENT     *EventTab;
 extern int       thisRoom;	      /* room currently in roomBuf	*/
-extern int       thisNet;
 extern LogTable  *logTab;	       /* RAM index of pippuls		*/
 extern logBuffer logBuf;		/* Log buffer of a person       */
 extern SListBase Serves;

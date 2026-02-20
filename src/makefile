@@ -30,22 +30,23 @@ CFLAGS=-D -ml $(OPTFLAGS) -wpro -wuse -j2 -c -d
 HEADERS=ctdl.h sysdep.h slist.h
 
 PORT=	arch.obj areas.obj \
-        bio.obj \
-        calllog.obj cc.obj cn.lib compact.obj ctdl.obj \
-	domains.obj dom-core.obj dom-init.obj dom-data.obj \
+        libbio.obj bio.obj \
+        calllog.obj cc.obj ctdl.obj \
 	events.obj \
-	floors.obj \
+	libtabl.obj floors.obj \
 	hot_help.obj \
 	info.obj infodisp.obj \
-	log.obj \
-	mail.obj mailfwd.obj misc.obj modem.obj msg.obj msgnfmt.obj \
-	netcache.obj netcall.obj netedit.obj netmisc.obj netrcv.obj netitl.obj \
+	libcryp.obj log.obj \
+	formhdr.obj \
+	mail.obj mailfwd.obj misc.obj modem.obj libmsg.obj msg.obj \
+	netcache.obj netcall.obj netedit.obj netrcv.obj \
 	offline.obj \
 	rooma.obj roomb.obj route.obj \
 	shared.obj \
 	tools.lib \
-	virt.obj virt2.obj vortex.obj \
-	slist.obj kstrk.obj
+	virt2.obj \
+	slist.obj kstrk.obj \
+	liblog.obj liblog2.obj libtime.obj libroom.obj
 
 .c.obj:
 	$(CC) $(CFLAGS) $<
@@ -134,9 +135,10 @@ slist.obj: $(HEADERS)
 
 kstrk.obj: $(HEADERS)
 
-confg.exe confg: confg.obj confg2.obj syscfg.obj cn.lib info.obj mailfwd.obj \
-		shared.obj virt.obj tools.lib dom-init.obj slist.obj \
-		dom-core.obj dom-data.obj domains.obj 
+confg.exe confg: confg.obj confg2.obj syscfg.obj info.obj mailfwd.obj \
+		tools.lib slist.obj \
+		dom-init.obj dom-data.obj cn.lib \
+		virt.obj libroom.obj libcryp.obj libtabl.obj liblog.obj
 	tlink @confg.rsp
 
 confg.obj: $(HEADERS)
@@ -145,11 +147,10 @@ confg2.obj: $(HEADERS)
 
 syscfg.obj: $(HEADERS) c86door.h
 
-cn.lib: arch.obj libnet.obj liblog.obj libcryp.obj libroom.obj\
- libtabl.obj libmsg.obj liblog2.obj libtime.obj libbio.obj formhdr.obj
+cn.lib: arch.obj libnet.obj \
+ libmsg.obj libbio.obj
     del cn.lib
-    tlib /c cn +arch +libnet +liblog +libcryp +libroom +libtabl +libmsg \
-    +liblog2 +libtime +libbio +formhdr
+    tlib /c cn +arch +libnet +libmsg +libbio
 
 tools.lib: tools.obj
 	del tools.lib
