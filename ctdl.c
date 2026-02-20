@@ -2152,28 +2152,3 @@ void UserAdmin(logBuffer *lBuf)
 	}
     }
 }
-
-lcd(int x)
-{
-#ifdef NEEDED
-	int rover;
-	    extern MSG_NUMBER    *lPtrTab;
-
-		mPrintf("From location %d\n ", x);
-#ifdef LOOP
-		for (rover = 0; rover < MAXROOMS; rover++) {
-#else
-	rover = 55;
-#endif
-if (logBuf.lastvisit[rover] == lPtrTab[rover]) return;
-		PagingOn();
-			mPrintf("%3d. %ld, %ld\n ", rover,
-						logBuf.lastvisit[rover],
-						lPtrTab[rover]);
-#ifdef LOOP
-		}
-#endif
-		PagingOff();
-		iChar();
-#endif
-}

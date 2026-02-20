@@ -2092,7 +2092,6 @@ int showMessages(int flags, MSG_NUMBER LastMsg, ValidateShowMsg_f_t *Style)
 	break;
     }
 
-lcd(61);
     /* stuff may have scrolled off system unseen, so: */
     if (cfg.oldest  > lowLim) {
 	lowLim = cfg.oldest;
@@ -2114,7 +2113,6 @@ lcd(61);
 		return MsgCount;
 	    }
 	}
-lcd(62);
 
 	/* first get the REAL msgNo -- this is a kludge, replace next m. r. */
 	msgNo = (roomBuf.msg[i].rbmsgNo & S_MSG_MASK);
@@ -2126,20 +2124,16 @@ lcd(62);
 	 * mode -- we don't use this loop for sending Mail, although we do
 	 * for other rooms.
 	 */
-lcd(63);
 	if (
 		(msgNo >= lowLim && highLim >= msgNo) ||
 		(READMSG_TYPE(flags) == NEWoNLY &&
 				msgNo != roomBuf.msg[i].rbmsgNo &&
 		 msgNo > cfg.oldest)
 	 ) {
-lcd(64);
 
 	    if (findMessage(roomBuf.msg[i].rbmsgLoc, msgNo, TRUE)) {
-lcd(65);
 	    	ReverseMessage = FALSE;
 		if ((*Style)(0, i)) {	/* successful print? */
-lcd(66);
 
 		    MsgCount++;
 
@@ -2148,7 +2142,6 @@ lcd(66);
 			if (!MoreWork(TRUE)) {
 			}
 		    }
-lcd(67);
 		    /*  Pull current message from room if flag set */
 		    if (pullMessage) {
 			pullMessage = FALSE;
@@ -2178,7 +2171,6 @@ lcd(67);
 			SetShowLimits(flags & REV, &start, &finish, &increment);
 		    }
 
-lcd(68);
 		    if (journalMessage) {
 			msgToDisk("", FALSE, msgNo, roomBuf.msg[i].rbmsgLoc,
 									0);
@@ -2203,7 +2195,6 @@ lcd(68);
 			continue;	/* skip the increment - reprint msg */
 		    }
 
-lcd(69);
 		    if (
 			Showing == MSGS
 			&&
@@ -2248,9 +2239,7 @@ lcd(69);
 		    else if (thisRoom == MAILROOM && (logBuf.lbMail[i].rbmsgNo & (~S_MSG_MASK))) {
 			logBuf.lbMail[i].rbmsgNo &= S_MSG_MASK;
 		    }
-lcd(70);
 		}
-lcd(661);
 	    }
 	}
 	i += increment;
