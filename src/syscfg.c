@@ -61,12 +61,12 @@ extern CONFIG cfg;       /* The configuration variable	*/
 extern MessageBuffer   msgBuf;
 extern rTable    *roomTab;	      /* RAM index of rooms		*/
 
-#define LCR_OFFSET	0x0b
-#define MD_OFFSET	0x08
-#define LSTAT_OFFSET	0x0d
-#define MSTAT_OFFSET	0x0e
-#define MCR_OFFSET	0x0c
-#define IER_OFFSET	0x09
+#define MD_OFFSET    0x08
+#define IER_OFFSET   0x09
+#define LCR_OFFSET   0x0b
+#define MCR_OFFSET   0x0c
+#define LSTAT_OFFSET 0x0d
+#define MSTAT_OFFSET 0x0e
 
 struct {
 	int Base;
@@ -217,8 +217,8 @@ int sysSpecs(char *line, int offset, char *status, FILE *fd)
 	} else if (strcmp(var, OLDVIDEO) == SAMESTRING) {
 	    cfg.DepData.OldVideo = TRUE;
 	} else if (strcmp(var, LOCKPORT) == SAMESTRING) {
-	    if (arg < 0 || arg > 8)
-		illegal("Bad value for #LOCK-PORT: 0-6 valid only.");
+	    if (arg < 0 || arg > 9)
+		illegal("Bad value for #LOCK-PORT: 0-9 valid only.");
 	    cfg.DepData.LockPort = arg;
 	} else if (strcmp(var, MDMSETUP) == SAMESTRING) {
 	    readString(line, cfg.codeBuf + offset, TRUE);
@@ -577,13 +577,13 @@ char SysDepIntegrity(int *offset)
 	    bad = TRUE;
 	}
 	else {
-	    cfg.DepData.modem_data = ComTable[IBMcom - 1].Base + MD_OFFSET;
+	    cfg.DepData.modem_data   = ComTable[IBMcom - 1].Base + MD_OFFSET;
+	    cfg.DepData.ier          = ComTable[IBMcom - 1].Base + IER_OFFSET;
+	    cfg.DepData.ln_ctrl      = ComTable[IBMcom - 1].Base + LCR_OFFSET;
+	    cfg.DepData.mdm_ctrl     = ComTable[IBMcom - 1].Base + MCR_OFFSET;
+	    cfg.DepData.line_status  = ComTable[IBMcom - 1].Base + LSTAT_OFFSET;
 	    cfg.DepData.modem_status = ComTable[IBMcom - 1].Base + MSTAT_OFFSET;
-	    cfg.DepData.line_status = ComTable[IBMcom - 1].Base + LSTAT_OFFSET;
-	    cfg.DepData.mdm_ctrl = ComTable[IBMcom - 1].Base + MCR_OFFSET;
-	    cfg.DepData.ln_ctrl = ComTable[IBMcom - 1].Base + LCR_OFFSET;
-	    cfg.DepData.ier = ComTable[IBMcom - 1].Base + IER_OFFSET;
-	    cfg.DepData.com_vector = ComTable[IBMcom - 1].Vector;
+	    cfg.DepData.com_vector   = ComTable[IBMcom - 1].Vector;
 	    if (!IRQforce) cfg.DepData.PIC_mask = ComTable[IBMcom - 1].PICMask;
 	}
     }
