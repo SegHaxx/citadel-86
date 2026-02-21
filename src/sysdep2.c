@@ -721,17 +721,19 @@ static void YieldInit(void){
 	SpecialMessage("");
 }
 
-/*
- * systemInit()
- *
- * This is the system dependent initialization routine.
- */
-int systemInit()
-{
+static char* AuditBase;
+
+// This will make a file name for an audit file.
+void makeAuditName(char *logfn,char *str){
+    sprintf(logfn,"%s%s",AuditBase,str);
+}
+
+// This is the system dependent initialization routine.
+int systemInit(void){
     extern char locDisk, ourHomeSpace[100];
     SYS_FILE filename;
     static TwoNumbers TwoTemp = { 240, 100l };
-    extern char AuditBase[];
+	char path[100];
 
     if ((garp = GetDynamic(8000)) == NULL)
 	printf("WARNING: Couldn't allocate important buffer!\n");
@@ -746,11 +748,11 @@ int systemInit()
     if (cfg.Audit != 0) {
 	/* ugly kludge */
 	if (cfg.auditArea.saDisk == locDisk - 'A') {
-	    strcpy(AuditBase, ourHomeSpace);
+	    strcpy(path, ourHomeSpace);
 	}
 	else {
 	    DoBdos(SETDISK, cfg.auditArea.saDisk);
-	    getcwd(AuditBase, 99);
+	    getcwd(path, 99);
 	    DoBdos(SETDISK, locDisk - 'A');
 	}
 
@@ -760,13 +762,15 @@ int systemInit()
      * as it happens is precisely the only time we don't* want to append
      * a backslash.
      */
-	if (strLen(AuditBase) != 3)
-	    strcat(AuditBase, "\\");
+	if (strLen(path) != 3)
+	    strcat(path, "\\");
 
 	if (strLen(cfg.codeBuf + cfg.auditArea.saDirname) != 0) {
-	    strcat(AuditBase, cfg.codeBuf + cfg.auditArea.saDirname);
+	    strcat(path, cfg.codeBuf + cfg.auditArea.saDirname);
 	}
     }
+	AuditBase=GetDynamic(strlen(path)+1);
+	strcpy(AuditBase,path);
 
     VideoInit();
 
@@ -1000,16 +1004,8 @@ void MoveToSysDirectory(SYS_AREA *area)
     SetSpace(fn);
 }
 
-/*
- * SysArea()
- *
- * This function transforms the SYS_AREA to something in English and puts it
- * in buf.
- */
-void SysArea(char *buf, SYS_AREA *area)
-{
-	extern char AuditBase[];
-
+// This function transforms the SYS_AREA to something in English and puts it in buf.
+void SysArea(char *buf, SYS_AREA *area){
 	if (&cfg.auditArea != area) {
 		sprintf(buf,"%c:%s", area->saDisk + 'a',
 						cfg.codeBuf + area->saDirname);
@@ -1017,4 +1013,3 @@ void SysArea(char *buf, SYS_AREA *area)
 	else strcpy(buf, AuditBase);
 	buf[strlen(buf) - 1] = 0;
 }
-

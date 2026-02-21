@@ -731,18 +731,6 @@ void sysSendFiles(struct fl_send *sendWhat)
     homeSpace();
 }
 
-char AuditBase[100];
-
-/*
- * makeAuditName()
- *
- * This will make a file name for an audit file.
- */
-void makeAuditName(char *logfn, char *str)
-{
-    sprintf(logfn, "%s%s", AuditBase, str);
-}
-
 /*
  * MakeDomainDirectory()
  *
