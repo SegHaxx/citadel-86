@@ -45,8 +45,6 @@ extern UNS_32	     BaudRate;
 extern MessageBuffer msgBuf;
 extern char CallCrash;
 
-static char CallFn[80] = "";	/* can't use SYS_FILE here I fear */
-
 struct {
 	int flag;
 	char val;
@@ -73,6 +71,7 @@ void logMessage(int typemessage, UNS_32 val, int flags)
     char *mon, buf[100];
     char *format = "%s %s @ %d:%02d%s";
     char *SaveName = "callsave.sys";
+	SYS_FILE CallFn;
 
     if (CallCrash) return;
 
