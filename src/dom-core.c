@@ -240,8 +240,8 @@ static void DomainLog(char *str){
     char work[200];
     extern SListBase Errors;
 
-	{char datebuf[10];
-    sprintf(work, "(%s %s) %s", formDate(datebuf), Current_Time(), str);}
+	{char datebuf[10];char timebuf[13];
+    sprintf(work,"(%s %s) %s",formDate(datebuf),Current_Time(timebuf),str);}
     makeSysName(name, "domain.log", &cfg.domainArea);
     CallMsg(name, work);
     if (inNet == NON_NET) {

@@ -329,8 +329,8 @@ void inRouteMail()
 	strcpy(domain, msgBuf.mbdomain);
 	strcpy(tempMess.mbauth, "Citadel");
 	strcpy(tempMess.mbroom, "Mail");
-	strcpy(tempMess.mbtime, Current_Time());
-	{char datebuf[10];
+	{char datebuf[10];char timebuf[13];
+	strcpy(tempMess.mbtime, Current_Time(timebuf));
 	strcpy(tempMess.mbdate, formDate(datebuf));}
 	sprintf(tempMess.mbId, "%lu", cfg.newest++ + 1);
 	ZeroMsgBuffer(&msgBuf);
@@ -339,38 +339,9 @@ void inRouteMail()
     }
 }
 
-/*
- * RecipientAvail()
- *
- * This function checks to see if recipient is here.  This includes override
- * handling.
- */
-char RecipientAvail()
-{
-    void RecAvWork();
-
-    GoodCount = BadCount = 0;
-
-    if (msgBuf.mbdomain[0]) {
-	if (!HasOverrides(&msgBuf)) {
-	    RecAvWork(msgBuf.mbto);
-	}
-	else {
-	    RunList(&msgBuf.mbOverride, RecAvWork);
-	}
-	return GoodCount;
-    }
-    return TRUE;
-}
-
-/*
- * RecAvWork()
- *
- * This function does the real work of RecipientAvailable() - split out to
- * better handle other recipients.
- */
-static void RecAvWork(char *name)
-{
+// This function does the real work of RecipientAvailable() - split out to
+// better handle other recipients.
+static void RecAvWork(char *name){
     if (PersonExists(name) == ERROR &&
 		strCmpU(msgBuf.mbauth, "Citadel") != SAMESTRING) {
 	BadCount++;
@@ -383,6 +354,23 @@ static void RecAvWork(char *name)
     else if (PersonExists(name) != ERROR ||
 		strCmpU(msgBuf.mbauth, "Citadel") != SAMESTRING)
     	GoodCount++;
+}
+
+// This function checks to see if recipient is here.  This includes override
+// handling.
+char RecipientAvail(){
+    GoodCount = BadCount = 0;
+
+    if (msgBuf.mbdomain[0]) {
+	if (!HasOverrides(&msgBuf)) {
+	    RecAvWork(msgBuf.mbto);
+	}
+	else {
+	    RunList(&msgBuf.mbOverride, RecAvWork);
+	}
+	return GoodCount;
+    }
+    return TRUE;
 }
 
 /*
@@ -450,6 +438,9 @@ void netController(int NetStart, int NetLength, MULTI_NET_DATA whichNets,
 	if (logNetResults) {
 		fclose(netLog);
 		netLog = NULL;
+	{char timebuf[13];
+	splitF(netLog, "Calling %s @ %s (%s): ",
+			netBuf.netName, netBuf.netId, Current_Time(timebuf));}
 	}
 }
 
@@ -483,8 +474,8 @@ static void netControllerWork(int NetStart, int NetLength,
 	thisLog = -1;
 
 	splitF(netLog, "\nNetwork Session");
-	{char datebuf[10];
-	splitF(netLog, "\n%s @ %s\n", formDate(datebuf), Current_Time());}
+	{char datebuf[10];char timebuf[13];
+	splitF(netLog, "\n%s @ %s\n", formDate(datebuf), Current_Time(timebuf));}
 	SpecialMessage("Network Session");
 	logMessage(INTO_NET, 0l, 0);
 	modStat = haveCarrier = FALSE;
@@ -539,8 +530,8 @@ static void netControllerWork(int NetStart, int NetLength,
 					if ((called=callOut(searcher))!=NULL) {
 						if (!caller())
 							called->Unstable++;
-						splitF(netLog, "(%s)\n",
-								Current_Time());
+							{char timebuf[13];
+							splitF(netLog, "(%s)\n",Current_Time(timebuf));}
 					}
 					for (startTimer(WORK_TIMER);
 							!gotCarrier() &&
@@ -568,7 +559,8 @@ static void netControllerWork(int NetStart, int NetLength,
 		}
 	} while ((x = timeLeft()) > 0);
 
-	splitF(netLog, "\nOut of Networking Mode (%s)\n\n", Current_Time());
+	{char timebuf[13];
+	splitF(netLog, "\nOut of Networking Mode (%s)\n\n", Current_Time(timebuf));}
 
 	for (x = 0; x < cfg.netSize; x++)
 		if (netTab[x].ntMemberNets & PRIORITY_MAIL) {
@@ -674,8 +666,9 @@ static SystemCallRecord *callOut(int i)
 		called = NewCalledRecord(i);
 	}
 	getNet(callSlot = i, &netBuf);
+	{char timebuf[13];
 	splitF(netLog, "Calling %s @ %s (%s): ",
-			netBuf.netName, netBuf.netId, Current_Time());
+			netBuf.netName, netBuf.netId, Current_Time(timebuf));}
 	strcpy(normed, netBuf.netId);		/* Cosmetics */
 	strcpy(callerId, netBuf.netId);
 	strcpy(callerName, netBuf.netName);
@@ -932,7 +925,8 @@ roomTab[roomslot].rtlastNetBB);
 void netResult(char *msg)
 {
 	if (netMsg != NULL && SearchList(&Shutup, callerName) == NULL) {
-		fprintf(netMsg, "(%s) %s\n\n", Current_Time(), msg);
+		{char timebuf[13];
+		fprintf(netMsg, "(%s) %s\n\n", Current_Time(timebuf), msg);}
 		fflush(netMsg);
 		UsedNetMsg = TRUE;
 	}

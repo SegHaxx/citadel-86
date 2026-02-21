@@ -155,7 +155,7 @@ char LZHDir(FILE *fd, char *FileName, long *RSize, long *SSize, char *DateStr);
 char *PrintPretty(long s, char *result);
 char GifDir(FILE *fd, char longexpl, char *buf);
 void ShoveCR(void);
-char *Current_Time(void);
+char* Current_Time(char*);
 char reconfigure(void);
 int  CompressType(char *name);
 char MoreWork(char AtMsg);

@@ -400,7 +400,8 @@ void ScrNewUser()
 
 	if (!cfg.DepData.OldVideo) {
 		if (onLine() && strLen(OnTime) == 0) {
-			sprintf(OnTime, " %s", Current_Time());
+			char timebuf[13];
+			sprintf(OnTime, " %s", Current_Time(timebuf));
 		}
 		else if (!onLine() && strLen(OnTime) != 0) {
 			OnTime[0] = 0;

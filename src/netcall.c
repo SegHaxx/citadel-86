@@ -99,7 +99,8 @@ char caller()
 
     killConnection("caller");
 
-    splitF(netLog, "Finished with %s @%s\n", netBuf.netName, Current_Time());
+	{char timebuf[13];
+    splitF(netLog, "Finished with %s @%s\n", netBuf.netName, Current_Time(timebuf));}
 
     doResults();
     return TRUE;
@@ -203,7 +204,8 @@ void roleReversal(char reversed, int interrupted)
     if (reversed) return ;
     if (!netBuf.nbflags.local && !netBuf.nbflags.spine) return ;
 
-    splitF(netLog, "Reversing roles @ %s\n", Current_Time());
+	{char timebuf[13];
+    splitF(netLog, "Reversing roles @ %s\n", Current_Time(timebuf));}
 
     zero_struct(cmds);
     cmds.command = ROLE_REVERSAL;

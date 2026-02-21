@@ -36,21 +36,14 @@ void civTime(int *hours, char **which)
 	*hours = 12;
 }
 
-/*
- * Current_Time()
- *
- * This function will get the current time, format cutely.
- */
-char *Current_Time()
-{
-    char  *ml, *month;
-    int   year, day, h, m;
-    static char Time[13];
-
-    getCdate(&year, &month, &day, &h, &m);
+// This function will get the current time, format cutely.
+char* Current_Time(char* str){
+    char *ml,*month;
+    int y,d,h,m;
+    getCdate(&y, &month, &d, &h, &m);
     civTime(&h, &ml);
-    sprintf(Time, "%d:%02d %s", h, m, ml);
-    return Time;
+    sprintf(str, "%d:%02d %s",h,m,ml);
+    return str;
 }
 
 char  *monthTab[13] = {"", "Jan", "Feb", "Mar",

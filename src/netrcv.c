@@ -104,7 +104,8 @@ void system_called()
 
     inReceive = TRUE;
     RecMassTransfer = FALSE;
-    splitF(netLog, "Carrier %s\n", Current_Time());
+	{char timebuf[13];
+    splitF(netLog, "Carrier %s\n", Current_Time(timebuf));}
     processMail = checkNegMail = FALSE;
 
     if (!called_stabilize()) return ;
@@ -116,8 +117,9 @@ void system_called()
 
     rcvStuff(FALSE);
 
+	{char timebuf[13];
     splitF(netLog, "Finished with %s @%s\n",
-			callerName, Current_Time());
+			callerName, Current_Time(timebuf));}
     pause(20);
     killConnection("called");
     doResults();
