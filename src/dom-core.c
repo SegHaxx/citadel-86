@@ -46,7 +46,6 @@
  *	EatCosts()		Eat a line from ctdlcost.sys.
  *	FindCost()		Helps find the cost for a given domain.
  *	WriteDomainContents()	Handles .EN? in Mail.
- *	DomainLog()		Handles the file DOMAIN.LOG.
  *	RouteHere()		Is domain mail meant for here?
  *	LocalName()		Is given system local?
  *	lifo()			Last in First Out fn for the lists.
@@ -58,7 +57,6 @@
 /*
  * Some useful static functions.
  */
-void DomainLog(char *str);
 void *EatCosts(char *line);
 int SetUpCallOut(char *DName);
 int CallOutWork(char *DName);
@@ -234,6 +232,23 @@ DomainDir *GetDomain(char *DName, char create)
  	/* UpdateMap();	   don't update -- let caller do it */
     }
     return data;
+}
+
+// This writes out a message to the domain log.
+static void DomainLog(char *str){
+    SYS_FILE name;
+    char work[200];
+    extern SListBase Errors;
+
+	{char datebuf[10];
+    sprintf(work, "(%s %s) %s", formDate(datebuf), Current_Time(), str);}
+    makeSysName(name, "domain.log", &cfg.domainArea);
+    CallMsg(name, work);
+    if (inNet == NON_NET) {
+	AddData(&Errors, strdup(str), NULL, FALSE);
+    }
+    else
+	netResult(str);		/* netResult() will add time/date stuff */
 }
 
 /*
@@ -587,27 +602,6 @@ UNS_16 FindCost(char *domain)
     if ((data = SearchList(&Costs, domain)) == NULL)
 	return UnknownCost;
     return *data;
-}
-
-/*
- * DomainLog()
- *
- * This writes out a message to the domain log.
- */
-static void DomainLog(char *str)
-{
-    SYS_FILE name;
-    char work[200];
-    extern SListBase Errors;
-
-    sprintf(work, "(%s %s) %s", formDate(), Current_Time(), str);
-    makeSysName(name, "domain.log", &cfg.domainArea);
-    CallMsg(name, work);
-    if (inNet == NON_NET) {
-	AddData(&Errors, strdup(str), NULL, FALSE);
-    }
-    else
-	netResult(str);		/* netResult() will add time/date stuff */
 }
 
 /*

@@ -136,7 +136,6 @@ static int CmpDomain(DomainDir *s, DomainDir *t)
 /*
  * Some useful static functions.
  */
-void DomainLog(char *str);
 void *EatCosts(char *line);
 int SetUpCallOut(char *DName);
 int CallOutWork(char *DName);

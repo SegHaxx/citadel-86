@@ -945,8 +945,9 @@ void systat()
 	if (roomTab[i].rtflags.INUSE) roomCount++;
 
     mPrintf("This is %s\n ", &cfg.codeBuf[cfg.nodeTitle]);
+	{char datebuf[10];
     mPrintf("%s %s (V%s)\n",
-			formDate(), Current_Time(), VERSION);
+			formDate(datebuf), Current_Time(), VERSION);}
 
     if (loggedIn) {
 	mPrintf(" Logged in as %s\n", logBuf.lbname);

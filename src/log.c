@@ -791,10 +791,12 @@ void terminate(int discon, int save)
 	logMessage(L_OUT, 0l, (discon) ? 0 : LOG_TERM_STAY);
     }
 
-    printf("%s @ %s\n", formDate(), Current_Time());
+	{char datebuf[10];
+    printf("%s @ %s\n", formDate(datebuf), Current_Time());}
 
     if (loggedIn) {
-	ReadDate(formDate(), &logBuf.lblaston);
+		{char datebuf[10];
+		ReadDate(formDate(datebuf), &logBuf.lblaston);}
 	if (StillThere && exitValue != DOOR_EXIT) {
 	    SetKnown(-1, thisRoom, &logBuf);
 	    logBuf.lastvisit[thisRoom] = cfg.newest;

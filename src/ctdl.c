@@ -1845,7 +1845,8 @@ void greeting()
 
     expert = FALSE;
     mPrintf(" Running: %s (V%s%s) \n  ", VARIANT_NAME, VERSION, SysVers);
-    mPrintf(formDate());
+	{char datebuf[10];
+    mPrintf(formDate(datebuf));}
     mPrintf("\n H for Help\n ");
 
     printf("Chat mode %sabled\n", cfg.BoolFlags.noChat ? "dis" : "en");

@@ -195,7 +195,7 @@ void writeTutorial(FILE *fd, char noviceWarning);
 
 char *formHeader(char showtime);
 char *formRoom(int roomNo, int showPriv, int noDiscrimination);
-char *formDate(void);
+char *formDate(char* str);
 char HelpIfPresent(char *filename);
 char *lbyte(char *l);
 char MultiBanner(char *basename);

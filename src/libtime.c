@@ -82,12 +82,11 @@ static void CitaDate(char* str,int y,int m,int d){
 }
 
 // This function forms the current date.
-char *formDate(){
+char *formDate(char* str){
     int y,m,d,h,min,s,ms;
-    static char dateLine[10];
     getRawDate(&y,&m,&d,&h,&min,&s,&ms);
-    CitaDate(dateLine,y,m,d);
-    return dateLine;
+    CitaDate(str,y,m,d);
+    return str;
 }
 
 // This retrieves system date and returns in the parameters.

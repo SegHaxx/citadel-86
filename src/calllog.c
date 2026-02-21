@@ -91,8 +91,9 @@ void logMessage(int typemessage, UNS_32 val, int flags)
 		break;
 	case FIRST_IN:
 		oldDay = dy;
-		sprintf(buf, format, "System brought up", formDate(), hr, mn,
-									"");
+		{char datebuf[10];
+ 		sprintf(buf, format, "System brought up", formDate(datebuf), hr, mn,
+									"");}
 		CallMsg(CallFn, buf);
 		break;
 #ifndef NO_DOORS
@@ -108,8 +109,9 @@ void logMessage(int typemessage, UNS_32 val, int flags)
 #endif
 	case CRASH_OUT:
 	case LAST_OUT:
-		sprintf(buf, format, "System brought down", formDate(), hr, mn,
-			(typemessage == CRASH_OUT) ? " (crash exit!)" : "");
+		{char datebuf[10];
+ 		sprintf(buf, format, "System brought down", formDate(datebuf), hr, mn,
+			(typemessage == CRASH_OUT) ? " (crash exit!)" : "");}
 		CallMsg(CallFn, buf);
 		return;
 #ifndef NO_DOORS

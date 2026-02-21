@@ -636,8 +636,9 @@ void reqSendFile(struct cmd_data *cmds)
 			if (strcmp(work, cmds->fields[0]) != SAMESTRING)
 				sprintf(msgBuf.mbtext, "(Real name %s) ",
 							cmds->fields[0]);
+			{char datebuf[10];
 			sprintf(msgBuf.mbtext+strlen(msgBuf.mbtext),
-			"Received from %s on %s.", netBuf.netName, formDate());
+			"Received from %s on %s.", netBuf.netName, formDate(datebuf));}
 				/* for updating filedir.txt */
 			netSetNewArea(&cfg.receptArea);
 			updFiletag(work, msgBuf.mbtext);

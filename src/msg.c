@@ -894,8 +894,9 @@ char idiotMessage()
     if (cfg.AnonMailLength > 0 && strlen(msgBuf.mbtext) > cfg.AnonMailLength &&
 					 !onConsole) {
 	HangUp(TRUE);
-	sprintf(tempMess.mbtext, "   %s @ %s\n%s\n", formDate(), Current_Time(),
-					msgBuf.mbtext);
+	{char datebuf[10];
+	sprintf(tempMess.mbtext, "   %s @ %s\n%s\n", formDate(datebuf), Current_Time(),
+					msgBuf.mbtext);}
 	CallMsg("anonmail", tempMess.mbtext);
 	strCpy(msgBuf.mbtext, "Indecently long anonymous Mail has been stored in ANONMAIL.");
 	aideMessage(NULL,FALSE);
@@ -924,7 +925,8 @@ int procMessage(char uploading, char IsReply)
 		strCpy(msgBuf.mbauth,(roomBuf.rbflags.ANON) ? "":logBuf.lbname);
 
 	strCpy(msgBuf.mbroom, roomBuf.rbname);
-	strCpy(msgBuf.mbdate, (roomBuf.rbflags.ANON) ? "****" :  formDate());
+	{char datebuf[10];
+	strCpy(msgBuf.mbdate, (roomBuf.rbflags.ANON) ? "****" :  formDate(datebuf));}
 
 	if (!getRecipient()) {
 		return ERROR;
@@ -1780,9 +1782,9 @@ char putMessage(logBuffer *lBuf, UNS_16 flags)
 	/* write date:	 */
 	if (msgBuf.mbdate[0]) {
 	    dPrintf("D%s", msgBuf.mbdate);
-	}
-	else {
-	    dPrintf("D%s", formDate());
+	}else{
+		char datebuf[10];
+	    dPrintf("D%s", formDate(datebuf));
 	}
 
 	/* write time:	 */

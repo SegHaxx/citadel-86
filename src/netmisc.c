@@ -330,7 +330,8 @@ void inRouteMail()
 	strcpy(tempMess.mbauth, "Citadel");
 	strcpy(tempMess.mbroom, "Mail");
 	strcpy(tempMess.mbtime, Current_Time());
-	strcpy(tempMess.mbdate, formDate());
+	{char datebuf[10];
+	strcpy(tempMess.mbdate, formDate(datebuf));}
 	sprintf(tempMess.mbId, "%lu", cfg.newest++ + 1);
 	ZeroMsgBuffer(&msgBuf);
 	MoveMsgBuffer(&msgBuf, &tempMess);
@@ -482,7 +483,8 @@ static void netControllerWork(int NetStart, int NetLength,
 	thisLog = -1;
 
 	splitF(netLog, "\nNetwork Session");
-	splitF(netLog, "\n%s @ %s\n", formDate(), Current_Time());
+	{char datebuf[10];
+	splitF(netLog, "\n%s @ %s\n", formDate(datebuf), Current_Time());}
 	SpecialMessage("Network Session");
 	logMessage(INTO_NET, 0l, 0);
 	modStat = haveCarrier = FALSE;

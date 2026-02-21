@@ -57,7 +57,6 @@
  * Some useful static functions.
  */
 void *FindDomainH(), *EatDomainH();
-void DomainLog(char *str);
 void *CheckDomain(), *EatDomainLine(char *line);
 int CmpDomain();
 int SetUpCallOut(char *DName);
