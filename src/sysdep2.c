@@ -20,7 +20,6 @@
 #include "ctdl.h"
 #include "sys\stat.h"
 #include "ctype.h"
-#include "time.h"
 #include "stdarg.h"
 
 /*
@@ -965,30 +964,6 @@ int WhatDay()
     _AX = 0x2a00;
     geninterrupt(0x21);
     return _AL;
-}
-
-/*
- * AbsToReadable()
- *
- * This will return a human string representing that date.
- */
-char *AbsToReadable(unsigned long lastdate)
-{
-    struct tm   *data;
-    char	*m;
-    static char buffer[40];
-    extern char *monthTab[];
-
-    /* 0l represents never in our scheme */
-    if (lastdate == 0l) return "Never";
-
-    data = localtime((time_t *) &lastdate);
-    civTime(&data->tm_hour, &m);
-
-    sprintf(buffer, "%d%s%02d @ %d:%02d %s",
-			data->tm_year, monthTab[data->tm_mon + 1],
-			data->tm_mday, data->tm_hour, data->tm_min, m);
-    return buffer;
 }
 
 /*
