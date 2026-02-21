@@ -375,8 +375,8 @@ typedef struct {
 
 typedef struct {
     char *unambig;              /* name of the file */
-    char FileDate[8];           /* yymmmdd<0>   */
     long FileSize;              /* size of file */
+    char FileDate[10];           /* yyyymmmdd<0>   */
 } DirEntry;
 
 /*

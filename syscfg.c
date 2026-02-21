@@ -843,7 +843,6 @@ void GetDomainDirs(SListBase *list)
 void SysWildCard(void (*fn)(DirEntry *amb), char *mask)
 {
 	struct ffblk   FlBlock;
-	extern char    *monthTab[13];
 	DirEntry       fp;
 	int		   done;
 

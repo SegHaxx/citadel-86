@@ -474,24 +474,6 @@ char LZHDir(FILE *fd, char *FileName, long *RSize, long *SSize, char *DateStr)
 }
 
 /*
- * DosToNormal()
- *
- * This function converts a DOS-formatted date to a formatted string.  This
- * perhaps should reside in the system dependent code....
- */
-void DosToNormal(char *DateStr, UNS_16 DosDate)
-{
-    extern char *monthTab[13];
-
-    if (((DosDate & 0x1e0) >> 5) > 12 ||
-		((DosDate & 0x1e0) >> 5) < 1)
-	strcpy(DateStr, "No Date");
-    else
-	sprintf(DateStr, "%d%s%02d", ((DosDate & 0xfe00) >> 9) + 80,
-			monthTab[(DosDate & 0x1e0) >> 5], DosDate & 0x1f);
-}
-
-/*
  * calcrc()
  *
  * Calculates CRC for a given block.

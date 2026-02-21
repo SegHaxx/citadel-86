@@ -202,8 +202,7 @@ void CitGetFileList(char *mask, SListBase *list, long before, long after,
 								char *phrase)
 {
     struct ffblk   FlBlock;
-    extern char    *monthTab[13];
-    char	   *w, *work, *sp, again, buf[10];
+    char	   *w, *work, *sp, again;
     DirEntry       *fp;
     int		   done;
     struct stat    buff;
@@ -227,6 +226,7 @@ void CitGetFileList(char *mask, SListBase *list, long before, long after,
 
 	for (done = findfirst(work, &FlBlock, 0); !done; 
 						done = findnext(&FlBlock)) {
+		char buf[10];
 	    /* format date to our standards */
 	    DosToNormal(buf, FlBlock.ff_fdate);
 
