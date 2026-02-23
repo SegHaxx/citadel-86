@@ -737,7 +737,6 @@ void terminate(int discon, int save)
     extern MSG_NUMBER    *lPtrTab;
     extern char heldMess, IgnoreDoor;
     extern MessageBuffer	tempMess;
-    extern int	exitValue;
     extern char	ExitToMsdos;
     int	i;
     char	StillThere;

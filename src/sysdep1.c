@@ -98,7 +98,6 @@ extern char haveCarrier;
 extern long netBytes;
 extern char outFlag;
 extern char *strFile;
-extern char *indexTable;
 
 /*
  * Section 3.4. AREAS:

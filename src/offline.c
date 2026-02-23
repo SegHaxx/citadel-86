@@ -49,7 +49,6 @@ extern char	   echo;	   /* Should we echo? echo? echo?  */
 extern FILE	   *msgfl;
 extern FILE	   *roomfl;
 extern FILE	   *logfl;
-extern int	   exitValue;
 extern char	   *LCHeld, *WRITE_ANY, *WRITE_TEXT;
 extern char	   PrintBanner;
 extern char	   *R_SH_MARK, *LOC_NET, *NON_LOC_NET;

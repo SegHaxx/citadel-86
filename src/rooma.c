@@ -16,6 +16,7 @@
  */
 
 #include "ctdl.h"
+#include "rooma.h"
 
 /*
  *				Contents
@@ -27,7 +28,6 @@
  *	fillMailRoom()		set up Mail> from log record
  *	gotoRoom()		handles "g(oto)" command for menu
  *	GotoNamedRoom()		goto the named room, if possible.
- *	initCitadel()		system startup initialization
  *	KnownRoom()		is room known?
  *	knowRoom()		does some user know of specified room?
  *	legalMatch()		Looks for partial matches.
@@ -362,14 +362,12 @@ int RealGNR(char *nam, int (*func)(char *room))
     }
 }
 
-/*
- * initCitadel()
- *
- * This initializes system, returns TRUE if system is coming up normally,
- * false if returning from a door call.
- */
-char initCitadel()
-{
+// Initialize the system
+// Returns:
+// -1 if returning from a door
+//  0 on success
+// >0 on error, to be returned to the OS from main
+int initCitadel(void){
 	SYS_FILE    tempName;
 	extern char ExitToMsdos, *DirFileName;
 	extern UNS_32  BaudRate;
@@ -384,13 +382,13 @@ char initCitadel()
 	echo = BOTH;
 
 	if (!readSysTab(TRUE, TRUE))
-		exit(CRASH_EXIT);/* No system table? Tacky, tacky*/
+		return CRASH_EXIT;/* No system table? Tacky, tacky*/
 
 	cfg.weAre = CITADEL;
 	if ((SysVal = systemInit()) != 0) {
 		writeSysTab();
 		systemShutdown(SysVal);
-		exit(CRASH_EXIT);
+		return CRASH_EXIT;
 	}
 
 	printf("\n%s V%s\n%s\n\n", VARIANT_NAME, VERSION, COPYRIGHT);
@@ -401,7 +399,7 @@ char initCitadel()
 		printf("Lock File found!!  Do you have Citadel already up?\n");
 		writeSysTab();	/* Save it out just in case */
 		systemShutdown(0);
-		exit(RECURSE_EXIT);
+		return RECURSE_EXIT;
 	}
 
 	SpecialMessage("Opening files");
@@ -474,7 +472,7 @@ char initCitadel()
 	if ((!IgnoreDoor && cfg.BoolFlags.IsDoor) && !fromDoor && !BpsSet) {
 		printf("This is a Door C-86.\n");
 		writeSysTab();
-		exit(RECURSE_EXIT);
+		return RECURSE_EXIT;
 	}
 
 	/* Now open the modem up */
@@ -500,8 +498,8 @@ char initCitadel()
 	if (fromDoor && BaudRate != 0l && !gotCarrier())
 		justLostCarrier = TRUE;
 
-	return !fromDoor;	/* if we come back from a door, don't   */
-				/* display a banner.			*/
+	// return -1 if we're back from a door
+	return fromDoor?-1:0;
 }
 
 /*

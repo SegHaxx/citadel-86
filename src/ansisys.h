@@ -428,10 +428,6 @@ void GiveSpaceLeft(int thisRoom);
 void systemCommands(void);
 #endif
 
-#ifndef systemShutdown
-void systemShutdown(int SysErrorVal);
-#endif
-
 #ifndef OutsideEditor
 void OutsideEditor(void);
 #endif
@@ -454,10 +450,6 @@ int receive(int seconds);
 
 #ifndef WhatDay
 int WhatDay(void);
-#endif
-
-#ifndef systemInit
-int systemInit(void);
 #endif
 
 #ifndef ResIntrp

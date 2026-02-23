@@ -28,7 +28,6 @@ LogTable	*logTab;		/* RAM index of pippuls	*/
 NetTable	*netTab;		/* RAM index of nodes	*/
 rTable		*roomTab;		/* RAM index of rooms	*/
 EVENT		*EventTab = NULL;
-char		*indexTable = "ctdlTabl.sys";
 struct floor	*FloorTab;
 int		TopFloor;
 static char	*msg1 = "?old ctdlTabl.sys!";
@@ -47,6 +46,11 @@ SListBase Moderators = { NULL, ChkNtoStr, NULL, FreeNtoStr, EatNMapStr };
 			/* These two should change from major release to */
 #define CHKM    8       /* major release	*/
 #define ENDM    9
+
+static const char* indexTable="ctdlTabl.sys";
+
+// Delete ctdlTabl.sys from disk
+void indexTable_delete(void){unlink(indexTable);}
 
 label HomeId;
 /*
@@ -80,7 +84,7 @@ char readSysTab(char kill, char showMsg)
     caller = cfg.weAre;
 
     if ((fd = fopen(indexTable, READ_ANY)) == NULL) {
-	if (showMsg) printf("?no %s!", indexTable);    /* Tsk, tsk! */
+	if (showMsg) printf("?no %s!\n", indexTable);    /* Tsk, tsk! */
 	return(FALSE);
     }
 
@@ -169,7 +173,7 @@ char readSysTab(char kill, char showMsg)
 	}
     }
 
-    if (kill) unlink(indexTable);
+    if (kill) indexTable_delete();
 
     crypte(cfg.sysPassword, sizeof cfg.sysPassword, 0);
 

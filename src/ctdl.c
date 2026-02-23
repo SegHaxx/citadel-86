@@ -1871,18 +1871,13 @@ void greeting()
 }
 
 #define FAXSTR	"faxstring="
-/*
- * main()
- *
- * This is the main manager.
- */
-void main(int argc, char **argv)
-{
-    extern char logNetResults, netDebug, DisVandals,
-		VortexHandle, BpsSet, ItlWxmodem, IgnoreDoor, more[];
-    extern char *UploadLog, LocalAreaCode;
-    char c, x, errMsg;
-    int  CmdResult = GOOD_SELECT;
+
+int cdecl main(int argc,char** argv){
+	extern char *UploadLog;
+	int CmdResult = GOOD_SELECT;
+	char c,x,errMsg;
+	extern char DisVandals, BpsSet, ItlWxmodem, IgnoreDoor, more[];
+	extern char logNetResults, netDebug, VortexHandle, LocalAreaCode;
 
     cfg.weAre		= CITADEL;
     slistmalloc		= GetDynamic;
@@ -1933,10 +1928,13 @@ void main(int argc, char **argv)
 	    errMsg = TRUE;
 	}
     }
-    if (initCitadel()) {
-	greeting();
-	logMessage(FIRST_IN, 0l, 0);
-    }
+
+	{int err=initCitadel();
+	if(err>0) return err;
+	if(!err){ // skip greeting if we have returned from a door
+		greeting();
+		logMessage(FIRST_IN, 0l, 0);
+	}}
 
     startTimer(NEXT_ANYNET);      /* start anytime net timer */
 
@@ -1970,7 +1968,7 @@ void main(int argc, char **argv)
     ModemShutdown(((exitValue == DOOR_EXIT ||
 	(cfg.BoolFlags.IsDoor && !IgnoreDoor)) && !onConsole) ? FALSE : TRUE);
     systemShutdown(0);
-    exit(exitValue);
+    return exitValue;
 }
 
 /*

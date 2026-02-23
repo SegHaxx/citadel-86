@@ -18,7 +18,9 @@
 #define TIMER_FUNCTIONS_NEEDED
 
 #include "ctdl.h"
-#include "sys\stat.h"
+#include "libtabl.h"
+
+#include "sys/stat.h"
 #include "ctype.h"
 #include "stdarg.h"
 
@@ -53,8 +55,6 @@
  *	safeopen()		opens a file
  *	setRawDate()		set date (system dependent code)
  *	systemCommands()		run outside commands in the O.S.
- *	systemInit()		system dependent init
- *	systemShutdown()		system dependent shutdown
  *	WhatDay()		returns what day it is
  *
  *		# == local for this implementation only
@@ -103,7 +103,6 @@ extern char echoChar;
 extern char haveCarrier;
 extern char outFlag;
 extern char *strFile;
-extern char *indexTable;
 extern char loggedIn;
 
 char straight = TRUE;
@@ -634,7 +633,7 @@ fprintf(fd,
 		}
 		homeSpace();
 	    }
-	    unlink(indexTable);
+	    indexTable_delete();
 	    unlink(LOCKFILE);
 	    if (!cfg.DepData.OldVideo && onConsole) {
 		mPrintf("Any key.");
@@ -728,7 +727,7 @@ void makeAuditName(char *logfn,char *str){
     sprintf(logfn,"%s%s",AuditBase,str);
 }
 
-// This is the system dependent initialization routine.
+// System dependent initialization routine.
 int systemInit(void){
     extern char locDisk, ourHomeSpace[100];
     SYS_FILE filename;
@@ -950,16 +949,9 @@ void VideoInit()
     ScrNewUser();
 }
 
-/*
- * systemShutdown()
- *
- * This is the system dependent shutdown code.
- */
-void systemShutdown(int SystemErrorValue)
-{
-    extern int exitValue;
-
-    StopVideo();
+// System dependent shutdown code.
+void systemShutdown(int SystemErrorValue){
+	StopVideo();
 }
 
 /*

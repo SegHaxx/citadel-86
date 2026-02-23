@@ -233,7 +233,6 @@ void SetKnown(int GenVal, int Room, logBuffer *lBuf);
 void listRooms(char mode);
 void SetMailRoom(void);
 
-char initCitadel(void);
 char CheckForSkippedMsgs(void);
 char legalMatch(int i, label target);
 char knowRoom(logBuffer *lBuf, int i);

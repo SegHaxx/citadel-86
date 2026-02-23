@@ -1,0 +1,1 @@
+void indexTable_delete(void);

@@ -204,7 +204,6 @@ extern AN_UNSIGNED crtColumn; /* current position on screen	*/
 extern char	prevChar;	/* previous char	*/
 extern char	outFlag;	/* output flag	*/
 extern char	ExitToMsdos;	/* Kill program flag	*/
-extern int	exitValue;
 		/* net stuff vars should go here */
 extern char	inNet;
 extern FILE	*netLog;
