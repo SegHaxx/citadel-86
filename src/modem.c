@@ -855,7 +855,7 @@ AN_UNSIGNED modIn()
 		chkTimeSince(WORK_TIMER) >= MAX_TIME) ||
 	    (whichIO == CONSOLE && cfg.ConTimeOut != 0 &&
 				chkTimeSince(WORK_TIMER) >= cfg.ConTimeOut)) {
-	    mPrintf("Sleeping? Call again :-)");
+	    mPrintf("Sleeping? Call again :-)\n\n");
 	    logFlags = LOG_TIMEOUT;
 	    if (whichIO == MODEM)
 		HangUp(FALSE);
