@@ -14,7 +14,6 @@
 
 #include "ctdl.h"
 #include "compress.h"
-//#include <alloc.h>
 
 /*
  *				Contents

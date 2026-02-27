@@ -101,7 +101,6 @@ extern NetBuffer netBuf, netTemp;
 extern FILE	 *upfd;
 
 extern int	 thisRoom;	/* Current room		*/
-//extern int	 thisNet;	/* Current node in use	  */
 extern int	 thisLog;	/* Current log position	 */
 extern int	 outPut;
 extern NetTable  *netTab;

@@ -76,7 +76,6 @@ extern MessageBuffer   msgBuf;	/* Message buffer */
 extern MessageBuffer   tempMess;	/* For held messages */
 extern logBuffer logBuf;	/* Person buffer */
 extern logBuffer logTmp;	/* Person buffer */
-//extern NetBuffer netBuf;
 NetBuffer	 netBuf;
 extern SListBase  Moderators;
 extern int  masterCount, thisRoom, thisLog;

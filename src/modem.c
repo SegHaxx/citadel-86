@@ -199,9 +199,7 @@ extern char	prevChar;	/* previous char	*/
 extern char	outFlag;	/* output flag	*/
 extern char	ExitToMsdos;	/* Kill program flag	*/
 		/* net stuff vars should go here */
-//extern char	inNet;
 char		inNet = NON_NET;
-//extern FILE	*netLog;
 FILE		*netLog;
 extern FILE	*strollfd;
 		/* bloooooop! */

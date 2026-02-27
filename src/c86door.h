@@ -95,6 +95,5 @@ typedef struct {
 
 char doDoor(char x);
 char BackFromDoor(void);
-//char NoTimeForDoor(int which, DoorData *DoorInfo);
 
 #endif

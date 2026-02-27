@@ -463,10 +463,6 @@ void zero_array(char *target);
 void ClearDoorTimers(void);
 #endif
 
-#ifndef Cumulate
-//void Cumulate();
-#endif
-
 #ifndef BackFromDoor
 char BackFromDoor(void);
 #endif

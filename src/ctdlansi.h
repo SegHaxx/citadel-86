@@ -97,10 +97,6 @@ char putWord(char *st, void (*)(char), char (*)(void));
 
 #ifdef MSG_INTERNALS
 
-//void AddMail();			/* intentionally unfinished */
-//void MailWork(int slot);
-//void NetForwarding(logBuffer *lBuf);
-//void AddNetMail(char *system, int flags);
 void doFlush(FILE *whichmsg, struct mBuf *mFile);
 void fakeFullCase(char *text);
 void flushMsgBuf(void);
@@ -108,13 +104,11 @@ void MakeIntoRouteMail(int result, DOMAIN_FILE fn, char isdomain, char *system,
 			char *domain, char OriginIsMsgBase, int slot);
 void mPeek(void);
 void MsgShow(void);
-//void noteMessage(logBuffer *lBuf, UNS_16 flags);
 void netMailProcess(int netPlace);
 void CheckForwarding(logBuffer *lbuf);
 void TellRoute(void);
 void ShowReply(int i);
 
-//char InterruptMessage(void);
 char deleteMessage(int m);
 char canRespond(void);
 char dGetWord(char *dest, int lim);
@@ -122,7 +116,6 @@ char doActualWrite(FILE *whichmsg, struct mBuf *mFile, char c);
 char replyMessage(MSG_NUMBER msgNo, SECTOR_ID Loc);
 char HasWritePrivs(void);
 char idiotMessage(void);
-//char moveMessage(char answer, int m, char *toReturn);
 char pullIt(int m);
 
 int getWord(char *dest, char *source, int offset, int lim);
@@ -153,10 +146,8 @@ char* Current_Time(char*);
 char reconfigure(void);
 int  CompressType(char *name);
 char MoreWork(char AtMsg);
-//void RestorePointers(MSG_NUMBER	*msgptrs);
 int AndMoreWork(int debug);
 char configure(logBuffer *lBuf, char AllQuestions, char AllowAbort);
-//void PrepareForMessageDisplay(char);
 
 void DosToNormal(char *DateStr, UNS_16 DosDate);
 void changeDate(void);
@@ -168,7 +159,6 @@ char doCR(void);
 void ExtraOption(char *Opts[], char *NewOpt);
 void download(int msgflags, char protocol, char global, int Compression,
 					OfflineReader *Reader);
-//void doGlobal(int flags, ValidateShowMsg_f_t * func);
 void RmTempFiles(char *dir);
 void getCdate(int *year, char **month, int *day, int *hours, int *minutes);
 char ingestFile(char *name, char *msg);
@@ -266,13 +256,10 @@ int OtherRecipients(char *name, int CCAddFlag);
 int WritePrivs(char *name, int DoWritePrivs);
 int CmnNetList(char *name, SharedRoomData **room, char ShouldBeThere,
 								char *errstr);
-//int editText(char *buf, int lim, char MsgEntryType, char *fn);
 int findRoom(void);
-//int knownHosts(char *name, int ShType);
 int makeKnown(char *user, int arg);
 int makeUnknown(char *user, int arg);
 int doMakeWork(char *user, int val);
-//int killFromList(char *sysName, int arg);
 
 SharedRoomData *searchForRoom(char *name);
 SharedRoomData *ListAsShared(char *name);
@@ -318,7 +305,6 @@ void FWithdraw(void);
 void FSkipped(void);
 char FForget(void);
 char FConfigure(void);
-//char FGotoSkip(int mode);
 void DeleteFloors(void);
 void MoveRooms(void);
 void RenameFloor(void);
@@ -490,7 +476,6 @@ char readSysTab(char kill, char showMsg);
 void *GetDynamic(unsigned size);
 
 int writeSysTab(void);
-//int common_read(void *block, int size, int elements, FILE *fd, char showMsg);
 
 void openFile(char *filename, FILE **fd);
 
@@ -580,16 +565,12 @@ void netResult(char *msg);
 
 #ifdef NET_INTERNALS
 	/* These functions are located in NETMISC.C */
-//int GetSystemName(char *buf, int curslot, MenuId id);
-//int GetSystemId(char *buf, int curslot, MenuId id);
 char called_stabilize(void);
 SystemCallRecord *NewCalledRecord(int slot);
 char RecipientAvail(void);
 char check_for_init(char mode);
-//SystemCallRecord *callOut(int i);
 char DirectRoute(NetBuffer *system);
 char SendPrepAsNormal(char *work, int *count);
-//char roomsShared(int slot);
 char HasOutgoing(SharedRoom *room);
 char AnyCallsNeeded(MULTI_NET_DATA whichNets);
 
@@ -597,16 +578,12 @@ int AckStabilize(int index);
 int AddNetMsgs(char *base, void (*procFn)(), char zap, int roomNo, char AddNetArea);
 int getNMsgChar(void);
 int timeLeft(void);
-//int addSendFile(char *Files, int arg);
 int addNetMem(char *netnum);
-//int MemberNets(char *netnum, int add);
 int makeCall(char EchoErr, MenuId id);
 int subNetMem(char *netnum);
 int needToCall(int system, MULTI_NET_DATA CurrentNets);
 
 void inRouteMail(void);
-//void KillTempFiles(int whichnode);
-//void NodeValues(MenuId id);
 void sendWCFile(FILE *fd);
 void inMail(void);
 void ClearRoomSharing(void);
@@ -615,11 +592,6 @@ void AreaCode(char *Id, char *Target);
 void setTime(int NetStart, int NetLength);
 void moPuts(char *s);
 void writeNet(char idsAlso, char LocalOnly);
-//void getSendFiles(MenuId id, label sysName);
-//void addNetNode(void);
-//void editNode(void);
-//void fileRequest(void);
-//void RoomStuff(char *title);
 int DumpRoom(SharedRoomData *room, int system, int roomslot, void *d);
 void EvalNeed(int searcher, MULTI_NET_DATA whichNets);
 void parseBadRes(char *c);      /* temporary until next major release */
@@ -654,7 +626,6 @@ void sendStuff(char reversed, char SureDoIt, char SendRooms);
 void SendPwd(void);
 void sendId(void);
 void sendMail(void);
-//void sendSharedRooms(void);
 void doSendFiles(void);
 void askFiles(void);
 void sendHangUp(void);
@@ -685,12 +656,8 @@ void getId(void);
 void getNextCommand(struct cmd_data *cmds);
 void grabCommand(struct cmd_data *cmds, char *sect);
 void reply(char state, char *reason);
-//void reqReversal(struct cmd_data *cmds, char reversed);
-//void reqCheckMail(void);
 void CheckRecipient(char *d);
 void targetCheck(void);
-//void doNetRooms(void);
-//void getMail(void);
 void reqSendFile(struct cmd_data *cmds);
 void netFileReq(struct cmd_data *cmds);
 void netRRReq(struct cmd_data *cmds, char SendBack);
@@ -727,8 +694,6 @@ char ITL_Send(char mode);
 char ITL_SendMessages(void);
 char ITL_StartRecMsgs(char *FileNm, char ReplyFirst, char OpenIt,
 						int (*OverRide)(int c));
-
-//int increment(int c);
 
 void ITL_RecCompact(struct cmd_data *cmds);
 void ITL_InitCall(void);
