@@ -572,64 +572,65 @@ char CheckDLimit(long estimated)
     return TRUE;
 }
 
-/*
- * configure()
- *
- * This sets up the terminal width etc via dialogue.
- */
-char configure(logBuffer *lBuf, char AllQuestions, char AllowAbort)
-{
-    extern char *AbortAcct;
-    int width, xwidth;		/* really! ugly kludge -- fix someday */
+// This sets up the terminal width etc via dialogue.
+char configure(logBuffer *lBuf, char AllQuestions, char AllowAbort){
+	extern char *AbortAcct;
+	int width, xwidth;		/* really! ugly kludge -- fix someday */
 
-    lBuf->lbnulls   = 0;
-    lBuf->lbdelay  = 0;
-    width = termWidth;
-    do {	/* this gross width stuff is caused by that #define in ctdl.h */
-	termWidth = width;
-	lBuf->lbwidth   = (int) getNumber("screen width in columns", 0l, 255l);
-	xwidth = lBuf->lbwidth;
-	if (onLine() && lBuf->lbwidth == 0 && AllowAbort) {
-	    termWidth = width;
-	    if (getYesNo(AbortAcct))
-		return FALSE;
+	if(!AllQuestions){
+		doCR();
+		mPrintf("XXXXXX");doCR();
+		mPrintf("XXXXXX");doCR();
+		lBuf->lbflags.LFMASK = getYesNo(
+				" Is there a blank line between the Xs") ? FALSE:TRUE;
 	}
-	if (lBuf->lbwidth < 10) {
-	    termWidth = width;
-	    mPrintf("Sorry, must be at least 10\n");
+
+	lBuf->lbnulls=0;
+	lBuf->lbdelay=0;
+	width=termWidth;
+	do{
+		//this gross width stuff is caused by that #define in ctdl.h
+		termWidth=width;
+		lBuf->lbwidth=
+			(int)getNumber("screen width in columns",0l,255l);
+		xwidth=lBuf->lbwidth;
+		if (onLine() && lBuf->lbwidth == 0 && AllowAbort) {
+			termWidth = width;
+			if (getYesNo(AbortAcct))
+				return FALSE;
+		}
+		if (lBuf->lbwidth < 10) {
+			termWidth = width;
+			mPrintf("Sorry, must be at least 10\n");
+		}
+		lBuf->lbwidth = xwidth;
+	} while (onLine() && lBuf->lbwidth < 10);
+
+	lBuf->lbpage=(int)
+		getNumber("page length (0 to disable)",0l,255l);
+	logBuf.lbflags.MSGPAGE=
+		getYesNo("Do Message Paging");
+
+	if(AllQuestions){
+		lBuf->lbflags.LFMASK=
+			getYesNo(" Do you need Linefeeds") ? TRUE:FALSE;
 	}
-	lBuf->lbwidth = xwidth;
-    } while (onLine() && lBuf->lbwidth < 10);
-
-	lBuf->lbpage = (int) getNumber("page length (0 to disable)", 0l, 255l);
-	logBuf.lbflags.MSGPAGE = getYesNo("Do Message Paging");
-
-    if (AllQuestions) {
-	lBuf->lbflags.LFMASK = getYesNo(" Do you need Linefeeds") ? TRUE : FALSE;
-    }
-    else {
-	mPrintf("XXXXXX");
-	doCR();
-	mPrintf("XXXXXX");
-	doCR();
-	lBuf->lbflags.LFMASK = getYesNo(" Is there a blank line between the Xs") ? FALSE : TRUE;
-    }
-    lBuf->lbflags.EXPERT      = getYesNo(" Are you an experienced Citadel user")
-							? TRUE : FALSE;
-    if (lBuf->lbflags.EXPERT || AllQuestions) {
-	lBuf->lbflags.TIME =
-		getYesNo(" Print time messages created") ? TRUE : FALSE;
-	lBuf->lbflags.OLDTOO   =
-		getYesNo(" Print last Old message on <N>ew Message request")
-							? TRUE : FALSE;
-	lBuf->lbflags.FLOORS = getYesNo(" Floor mode");
-    }
-    else {
-	lBuf->lbflags.OLDTOO = FALSE;
-	lBuf->lbflags.TIME = TRUE;
-	lBuf->lbflags.FLOORS = lBuf->lbflags.HALF_DUP = FALSE;
-    }
-    return TRUE;
+	lBuf->lbflags.EXPERT=
+		getYesNo("Are you an experienced Citadel user (disable verbose prompts) ") ? TRUE:FALSE;
+	if(!AllQuestions){
+		lBuf->lbflags.FLOORS=lBuf->lbflags.HALF_DUP=FALSE;
+		lBuf->lbflags.OLDTOO=FALSE;
+		lBuf->lbflags.TIME=TRUE;
+	}
+	if(AllQuestions){
+		lBuf->lbflags.TIME =
+			getYesNo(" Print time messages created") ? TRUE : FALSE;
+		lBuf->lbflags.OLDTOO   =
+			getYesNo(" Print last Old message on <N>ew Message request")
+			? TRUE : FALSE;
+		lBuf->lbflags.FLOORS = getYesNo(" Floor mode");
+	}
+	return TRUE;
 }
 
 /*
