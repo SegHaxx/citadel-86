@@ -1,0 +1,21 @@
+{
+"configurations": [
+{
+"name": "Linux",
+"includePath": [
+"${workspaceFolder}/src*"
+],
+"defines": [
+"DEFINED_VALUE=1"
+],
+"compilerPath": "cc",
+"cStandard": "c11",
+"cppStandard": "c++17",
+"intelliSenseMode": "clang-x64",
+"browse" : {
+"limitSymbolsToIncludedHeaders" : true
+}
+}
+],
+"version": 4
+}

@@ -1,0 +1,6 @@
+{
+    "makefile.makefilePath": "src/Makefile.linux",
+    "files.exclude": {
+        "deprecated": true
+    }
+}
