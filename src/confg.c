@@ -41,17 +41,13 @@
  *	main()			main controller
  *	illegal()		abort bottleneck
  *	msgInit()		sets up cfg.catChar, catSect etc.
- *	zapMsgFile()		initialize ctdlmsg.sys
- *	realZap()		does work of zapMsgFile()
  *	indexRooms()		build RAM index to ctdlroom.sys
  *	noteRoom()		enter room into RAM index	
- *	zapRoomFile()		erase & re-initialize ctdlroom.sys
  *	hash()			hashes a string to an integer
  *	logInit()		builds the RAM index to CTDLLOG.SYS
  *	noteLog()		enters a userlog record into RAM index
  *	sortLog()		sort CTDLLOG by time since last call
  *	wrapup()		finishes and writes ctdlTabl.sys
- *	zapLogFile()		erases & re-initializes CTDLLOG.SYS
  */
 
 /*
@@ -128,6 +124,160 @@ extern char   *WRITE_ANY;
 void CheckNet( void );
 void TheAreaCheck( void );
 int ReadDialOut(char *line, int baud, int *offset);
+
+// This does the work of zapMsgFile.
+static int realZap(void){
+
+	/* put null message in first sector... */
+	sectBuf[0]  = 0xFF; /*   \				*/
+	sectBuf[1]  =  '1'; /*    >  Message ID "1" MS-DOS style  */
+	sectBuf[2]  = '\0'; /*   /				*/
+	sectBuf[3]  =  'M'; /*   \    Null messsage	       */
+	sectBuf[4]  = '\0'; /*   /				*/
+
+	cfg.newest = cfg.oldest = 1l;
+
+	cfg.catSector   = 0;
+	cfg.catChar     = 5;
+
+	{int i;
+	for(i=5;i<MSG_SECT_SIZE;++i){
+			sectBuf[i]=0;}}
+
+	crypte(sectBuf, MSG_SECT_SIZE, 0);       /* encrypt      */
+	if (fwrite(sectBuf, MSG_SECT_SIZE, 1, msgfl) != 1) {
+		printf("zapMsgFil: write failed\n");
+		return FALSE;
+	}
+
+	crypte(sectBuf, MSG_SECT_SIZE, 0);       /* decrypt      */
+	sectBuf[0] = 0;
+	crypte(sectBuf, MSG_SECT_SIZE, 0);       /* encrypt      */
+	printf("\n%d sectors to be cleared\n", cfg.maxMSector);
+	{unsigned sect;
+	for(sect=1l;sect<cfg.maxMSector;++sect){
+		printf("%u\r", sect);
+		if (fwrite(sectBuf, MSG_SECT_SIZE, 1, msgfl) != 1) {
+			printf("zapMsgFil: write failed\n");
+			return FALSE;
+		}
+	}}
+	crypte(sectBuf, MSG_SECT_SIZE, 0);       /* decrypt      */
+	return TRUE;
+}
+
+// Initialize ctdlmsg.sys.
+static int zapMsgFile(void){
+	extern char *W_R_ANY;
+	char fn[80];
+
+	if (!FirstInit) {
+		printf("\nDestroy all current messages? ");
+		if (toUpper(simpleGetch()) != 'Y')   return FALSE;
+	}
+
+	if(cfg.BoolFlags.mirror) printf("Creating primary message file.\n");
+	if(!realZap()) return FALSE;
+	if(cfg.BoolFlags.mirror) {
+		fclose(msgfl);
+		makeSysName(fn, "ctdlmsg.sys", &cfg.msg2Area);
+		if ((msgfl = fopen(fn, W_R_ANY)) == NULL)
+			illegal("?Can't create the secondary message file!");
+		printf("Creating secondary message file.\n");
+		if(!realZap()) return FALSE;
+	}
+	return TRUE;
+}
+
+// Erase and re-initializes CTDLROOM.SYS.
+static int zapRoomFile(void){
+    int i;
+
+    if (!FirstInit) {
+	printf("\nWipe room file? ");
+	if (toUpper(simpleGetch()) != 'Y') return FALSE;
+	printf("\n");
+    }
+
+    zero_struct(roomBuf.rbflags);
+
+    roomBuf.rbgen	    = 0;
+    roomBuf.rbname[0]	= 0;   /* unnecessary -- but I like it...  */
+    for (i = 0;  i < MSGSPERRM;  i++) {
+	roomBuf.msg[i].rbmsgNo =  0l;
+	roomBuf.msg[i].rbmsgLoc = 0 ;
+    }
+
+    printf("maxrooms=%d\n", MAXROOMS);
+
+    for (thisRoom = 0;  thisRoom < MAXROOMS;  thisRoom++) {
+	printf("clearing room %d\r", thisRoom);
+	putRoom(thisRoom);
+	noteRoom();
+    }
+    printf("\n");
+
+    /* Lobby> always exists -- guarantees us a place to stand! */
+    thisRoom	    = 0	     ;
+    strcpy(roomBuf.rbname, baseRoom)    ;
+    roomBuf.rbflags.PERMROOM = TRUE;
+    roomBuf.rbflags.PUBLIC   = TRUE;
+    roomBuf.rbflags.INUSE    = TRUE;
+
+    putRoom(LOBBY);
+    noteRoom();
+
+    /* Mail> is also permanent...       */
+    thisRoom	    = MAILROOM      ;
+    strcpy(roomBuf.rbname, "Mail")      ;
+	/* Don't bother to copy flags, they remain the same (right?)    */
+    putRoom(MAILROOM);
+    noteRoom();
+
+    /* Aide> also...		*/
+    thisRoom	    = AIDEROOM      ;
+    strcpy(roomBuf.rbname, "Aide")      ;
+    roomBuf.rbflags.PERMROOM = TRUE;
+    roomBuf.rbflags.PUBLIC   = FALSE;
+    roomBuf.rbflags.INUSE    = TRUE;
+    putRoom(AIDEROOM);
+    noteRoom();
+
+    return TRUE;
+}
+
+// Erases & re-initializes ctdllog.sys.
+static int zapLogFile(void){
+    int  i;
+
+    if (!FirstInit) {
+	printf("\nWipe out log file? ");
+	if (toUpper(simpleGetch()) != 'Y')   return FALSE;
+	printf("\n");
+    }
+
+    /* clear RAM buffer out:			*/
+    logBuf.lbflags.L_INUSE = FALSE;
+    for (i = 0;  i < MAILSLOTS;  i++) {
+	logBuf.lbMail[i].rbmsgLoc = 0l;
+	logBuf.lbMail[i].rbmsgNo  = 0l;
+    }
+    for (i = 0;  i < NAMESIZE;  i++) {
+	logBuf.lbname[i] = 0;
+	logBuf.lbpw[i]   = 0;
+    }
+
+    /* write empty buffer all over file;	*/
+    for (i = 0; i < cfg.MAXLOGTAB;  i++) {
+	printf("Clearing log #%d\r", i);
+	putLog(&logBuf, i);
+	logTab[i].ltnewest = logBuf.lblaston;
+	logTab[i].ltlogSlot= i;
+	logTab[i].ltnmhash = hash(logBuf.lbname);
+	logTab[i].ltpwhash = hash(logBuf.lbpw  );
+    }
+    return TRUE;
+}
 
 /*
  * init()
@@ -790,77 +940,6 @@ void msgInit()
     printf("newest=%lu\n", cfg.newest);
 }
 
-/*
- * zapMsgFile()
- *
- * This function initializes ctdlmsg.sys.
- */
-char zapMsgFile()
-{
-    extern char *W_R_ANY;
-    char fn[80];
-
-    if (!FirstInit) {
-	printf("\nDestroy all current messages? ");
-	if (toUpper(simpleGetch()) != 'Y')   return FALSE;
-    }
-
-    if (cfg.BoolFlags.mirror) printf("Creating primary message file.\n");
-    realZap();
-    if (cfg.BoolFlags.mirror) {
-	fclose(msgfl);
-	makeSysName(fn, "ctdlmsg.sys", &cfg.msg2Area);
-	if ((msgfl = fopen(fn, W_R_ANY)) == NULL)
-	    illegal("?Can't create the secondary message file!");
-	printf("Creating secondary message file.\n");
-	realZap();
-    }
-    return TRUE;
-}
-
-/*
- * realZap()
- *
- * This does the work of zapMsgFile.
- */
-char realZap()
-{
-    int   i;
-    unsigned sect;
-
-    /* put null message in first sector... */
-    sectBuf[0]  = 0xFF; /*   \				*/
-    sectBuf[1]  =  '1'; /*    >  Message ID "1" MS-DOS style  */
-    sectBuf[2]  = '\0'; /*   /				*/
-    sectBuf[3]  =  'M'; /*   \    Null messsage	       */
-    sectBuf[4]  = '\0'; /*   /				*/
-
-    cfg.newest = cfg.oldest = 1l;
-
-    cfg.catSector   = 0;
-    cfg.catChar     = 5;
-
-    for (i=5;  i<MSG_SECT_SIZE;  i++) sectBuf[i] = 0;
-
-    crypte(sectBuf, MSG_SECT_SIZE, 0);       /* encrypt      */
-    if (fwrite(sectBuf, MSG_SECT_SIZE, 1, msgfl) != 1) {
-	printf("zapMsgFil: write failed\n");
-    }
-
-    crypte(sectBuf, MSG_SECT_SIZE, 0);       /* decrypt      */
-    sectBuf[0] = 0;
-    crypte(sectBuf, MSG_SECT_SIZE, 0);       /* encrypt      */
-    printf("\n%d sectors to be cleared\n", cfg.maxMSector);
-    for (sect = 1l;  sect < cfg.maxMSector;  sect++) {
-	printf("%u\r", sect);
-	if (fwrite(sectBuf, MSG_SECT_SIZE, 1, msgfl) != 1) {
-	    printf("zapMsgFil: write failed\n");
-	}
-    }
-    crypte(sectBuf, MSG_SECT_SIZE, 0);       /* decrypt      */
-    return TRUE;
-}
-
 SListBase KillInfoList = { NULL, NULL, NULL, NULL, NULL };
 /*
  * indexRooms()
@@ -1017,94 +1096,6 @@ int msgSort(theMessages *s1, theMessages *s2)
 	if (s1->rbmsgNo < s2->rbmsgNo) return 1;
 	if (s1->rbmsgNo > s2->rbmsgNo) return -1;
 	return 0;
-}
-
-/*
- * noteRoom()
- *
- * This function will enter room into RAM index array.
- */
-void noteRoom()
-{
-    int   i;
-    MSG_NUMBER last;
-
-    last = 0l;
-    for (i = 0;  i < MSGSPERRM;  i++)  {
-	if ((roomBuf.msg[i].rbmsgNo & S_MSG_MASK) > cfg.newest) {
-	    roomBuf.msg[i].rbmsgNo = 0l;
-	}
-	if (roomBuf.msg[i].rbmsgNo > last) {
-	    last = roomBuf.msg[i].rbmsgNo;
-	}
-    }
-    roomTab[thisRoom].rtlastMessage = last	   ;
-    strcpy(roomTab[thisRoom].rtname, roomBuf.rbname) ;
-    roomTab[thisRoom].rtgen	    = roomBuf.rbgen  ;
-    roomTab[thisRoom].rtFlIndex	= roomBuf.rbFlIndex;
-    copy_struct(roomBuf.rbflags, roomTab[thisRoom].rtflags);
-}
-
-/*
- * zapRoomFile()
- *
- * This function erases and re-initializes CTDLROOM.SYS.
- */
-char zapRoomFile()
-{
-    int i;
-
-    if (!FirstInit) {
-	printf("\nWipe room file? ");
-	if (toUpper(simpleGetch()) != 'Y') return FALSE;
-	printf("\n");
-    }
-
-    zero_struct(roomBuf.rbflags);
-
-    roomBuf.rbgen	    = 0;
-    roomBuf.rbname[0]	= 0;   /* unnecessary -- but I like it...  */
-    for (i = 0;  i < MSGSPERRM;  i++) {
-	roomBuf.msg[i].rbmsgNo =  0l;
-	roomBuf.msg[i].rbmsgLoc = 0 ;
-    }
-
-    printf("maxrooms=%d\n", MAXROOMS);
-
-    for (thisRoom = 0;  thisRoom < MAXROOMS;  thisRoom++) {
-	printf("clearing room %d\r", thisRoom);
-	putRoom(thisRoom);
-	noteRoom();
-    }
-    printf("\n");
-
-    /* Lobby> always exists -- guarantees us a place to stand! */
-    thisRoom	    = 0	     ;
-    strcpy(roomBuf.rbname, baseRoom)    ;
-    roomBuf.rbflags.PERMROOM = TRUE;
-    roomBuf.rbflags.PUBLIC   = TRUE;
-    roomBuf.rbflags.INUSE    = TRUE;
-
-    putRoom(LOBBY);
-    noteRoom();
-
-    /* Mail> is also permanent...       */
-    thisRoom	    = MAILROOM      ;
-    strcpy(roomBuf.rbname, "Mail")      ;
-	/* Don't bother to copy flags, they remain the same (right?)    */
-    putRoom(MAILROOM);
-    noteRoom();
-
-    /* Aide> also...		*/
-    thisRoom	    = AIDEROOM      ;
-    strcpy(roomBuf.rbname, "Aide")      ;
-    roomBuf.rbflags.PERMROOM = TRUE;
-    roomBuf.rbflags.PUBLIC   = FALSE;
-    roomBuf.rbflags.INUSE    = TRUE;
-    putRoom(AIDEROOM);
-    noteRoom();
-
-    return TRUE;
 }
 
 /*
@@ -1265,44 +1256,6 @@ void wrapup(char onlyParams)
 
 	RunList(&Events, EventWrite);
 	printf("writeSysTab = %d\n", writeSysTab());
-}
-
-/*
- * zapLogFile()
- *
- * This erases & re-initializes ctdllog.sys.
- */
-char zapLogFile()
-{
-    int  i;
-
-    if (!FirstInit) {
-	printf("\nWipe out log file? ");
-	if (toUpper(simpleGetch()) != 'Y')   return FALSE;
-	printf("\n");
-    }
-
-    /* clear RAM buffer out:			*/
-    logBuf.lbflags.L_INUSE = FALSE;
-    for (i = 0;  i < MAILSLOTS;  i++) {
-	logBuf.lbMail[i].rbmsgLoc = 0l;
-	logBuf.lbMail[i].rbmsgNo  = 0l;
-    }
-    for (i = 0;  i < NAMESIZE;  i++) {
-	logBuf.lbname[i] = 0;
-	logBuf.lbpw[i]   = 0;
-    }
-
-    /* write empty buffer all over file;	*/
-    for (i = 0; i < cfg.MAXLOGTAB;  i++) {
-	printf("Clearing log #%d\r", i);
-	putLog(&logBuf, i);
-	logTab[i].ltnewest = logBuf.lblaston;
-	logTab[i].ltlogSlot= i;
-	logTab[i].ltnmhash = hash(logBuf.lbname);
-	logTab[i].ltpwhash = hash(logBuf.lbpw  );
-    }
-    return TRUE;
 }
 
 /*

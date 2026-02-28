@@ -420,10 +420,6 @@ void CheckFloors(void);
 
 char isoctal( int c );
 char dGetWord(char *dest, int lim);
-char zapMsgFile(void);
-char realZap(void);
-char zapRoomFile(void);
-char zapLogFile(void);
 char cfindMessage(SECTOR_ID loc, MSG_NUMBER id);
 
 int logSort();
