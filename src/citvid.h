@@ -13,7 +13,7 @@ SCOPE byte vatt,
            vbot         = 24,
            vleft        = 0,
            vright       = 79,
-           vwherey      = 24;
+           vwherey=0;
 
 void vscroll ( int num );
 void vsetmode ( byte mode );

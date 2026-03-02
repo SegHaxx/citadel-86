@@ -348,7 +348,8 @@ long timeSince(TimePacket *Slast)
  *	Section 3.3 continued: Console stuff.
  */
 
-char CurTime[10] = "";
+static char CurTime[10]="";
+
 /*
  * ScreenUser()
  *
@@ -379,41 +380,66 @@ void ScrTimeUpdate(int hr, int mn)
     if (cfg.DepData.Clock == ALWAYS_CLOCK ||
        (cfg.DepData.Clock == BUSY_CLOCK && onLine())) {
 	civTime(&hr, &civ);
-	sprintf(CurTime, "%d:%02d %s", hr, mn, civ);
+	sprintf(CurTime, "%d:%02d%s", hr, mn, civ);
 	ScrNewUser();
     }
 }
 
+static char* my_strcpy(char* dst, const char* src){
+	while((*dst++=*src++));
+	return dst-1;
+}
+
 char OnTime[20] = "";	/* not static so we can set it in sysdoor.c */
-/*
- * ScrNewUser()
- *
- * This function is called when changes occur that might impact the status
- * line.
- */
-void ScrNewUser()
-{
-	char  work[80];
+
+// This function is called when changes occur that might impact the status
+void ScrNewUser(void){
 	extern char CallSysop, ForceNet;
 	extern SListBase ChatOn;
+	extern vwherey;
 
-	if (!cfg.DepData.OldVideo) {
-		if (onLine() && strLen(OnTime) == 0) {
-			char timebuf[13];
-			sprintf(OnTime, " %s", Current_Time(timebuf));
-		}
-		else if (!onLine() && strLen(OnTime) != 0) {
-			OnTime[0] = 0;
-		}
-		if (!onLine() && cfg.DepData.Clock == BUSY_CLOCK)
-			CurTime[0] = 0;
+	if (cfg.DepData.OldVideo) return;
 
-		sprintf(work, "%-20s%-12s %c%-2s%2s%c%16s", logBuf.lbname, OnTime,
-			(IsChatOn()) ?  'C' : ' ',
-			CallSysop ?    "^T" : "  ",
-			ForceNet ?     "^A" : "  ",
-			!anyEcho ?      'E' : ' ', CurTime);
-		statusline(work);
+	if (onLine() && strLen(OnTime) == 0) {
+		char timebuf[13];
+		sprintf(OnTime, "%s", Current_Time(timebuf));
+	}
+	else if (!onLine() && strLen(OnTime) != 0) {
+		OnTime[0] = 0;
+	}
+	if (!onLine() && cfg.DepData.Clock == BUSY_CLOCK)
+		CurTime[0] = 0;
+	{
+		char buf[80];
+		char* str=buf;
+		memset(str,' ',80);
+
+#if 1
+		if(IsChatOn()) *str++='C';
+		if(CallSysop) {*str++='^';*str++='T';}
+		if(ForceNet) {*str++='^';*str++='A';}
+		if(!anyEcho) *str++='E';
+		str=&buf[80-16-NAMESIZE-vwherey];
+		if(*OnTime){
+			*str++='@';
+			str=my_strcpy(str,OnTime);
+			*str++=' ';
+		}
+		str=my_strcpy(str,logBuf.lbname);
+		*str++=' ';
+		str=&buf[80-8-vwherey];
+		my_strcpy(str,CurTime);
+#else
+		sprintf(buf, "%-12s%-20s %c%-2s%2s%c%16s",
+				OnTime,
+				logBuf.lbname,
+				(IsChatOn()) ?  'C' : ' ',
+				CallSysop ?    "^T" : "  ",
+				ForceNet ?     "^A" : "  ",
+				!anyEcho ?      'E' : ' ', CurTime);
+#endif
+
+		statusline(buf);
 	}
 }
 
@@ -932,21 +958,18 @@ int ResultVal(char *buf)
 	return ERROR;
 }
 
-/*
- * VideoInit()
- *
- * This will initialize the video subsystem.
- */
-void VideoInit()
-{
-    char work[60];
-    extern char *VERSION;
+// This will initialize the video subsystem.
+void VideoInit(void){
+	extern char *VERSION;
+	extern vwherey;
+	char buf[80];
 
-    straight = FALSE;
-    if (cfg.DepData.OldVideo) return;
-    sprintf(work, VARIANT_NAME " V%s", VERSION);
-    video(work);
-    ScrNewUser();
+	straight = FALSE;
+	if (cfg.DepData.OldVideo) return;
+	sprintf(buf, VARIANT_NAME " V%s  ^L for SysOp Fn ", VERSION);
+	vwherey=strlen(buf)+2;
+	video(buf);
+	ScrNewUser();
 }
 
 // System dependent shutdown code.
