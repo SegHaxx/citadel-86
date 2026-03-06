@@ -168,19 +168,13 @@ byte vputch ( byte c ) {
    return ( c );
 }
 
-void statusline ( char *string ) {
-   byte ocol = vcol,
-	orow = vrow;
-   int k;
-
-   vlocate ( 0, vwherey );
-      vatt = (ScrColors->StatBack << 4) + ScrColors->StatFore;
-	 for ( k = vwherey; k < 80; k++ )
-	    vputch ( ' ' );
-	 vlocate ( 0, vwherey );
-	 vputs ( string );
-      vatt = (ScrColors->ScrBack << 4) + ScrColors->ScrFore;
-   vlocate ( orow, ocol );
+void statusline(char* str){
+   byte ocol = vcol, orow = vrow;
+   vatt = (ScrColors->StatBack << 4) + ScrColors->StatFore;
+   vlocate(0, vwherey);
+   vputs(str);
+   vatt = (ScrColors->ScrBack << 4) + ScrColors->ScrFore;
+   vlocate(orow, ocol);
 }
 
 void BellIt(TwoNumbers *d, char *echo)

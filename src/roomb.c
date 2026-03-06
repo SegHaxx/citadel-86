@@ -704,14 +704,8 @@ char getYesNo(char *prompt)
     return   toReturn;
 }
 
-/*
- * givePrompt()
- *
- * This function simply prints the usual "CURRENTROOM>" prompt -- not as simple
- * as it may seem.
- */
-void givePrompt()
-{
+// Print the "CURRENTROOM>" prompt -- not as simple as it may seem.
+void givePrompt(){
     outFlag = IMPERVIOUS;
     doCR();
     ScreenUser();

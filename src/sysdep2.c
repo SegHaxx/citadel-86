@@ -427,6 +427,8 @@ void OnTime_set(int h,int m){
 	StatusBar_FormatTime(OnTime,h,m);
 }
 
+static char* special="";
+
 // This function is called when changes occur that might impact the status
 void ScrNewUser(void){
 	extern char CallSysop, ForceNet;
@@ -449,6 +451,9 @@ void ScrNewUser(void){
 		char buf[80];
 		char* str=buf;
 		memset(str,' ',80);
+		str=S_cp(str,special);
+		*str++=' ';
+		*str++=' ';
 
 		if(IsChatOn()) *str++='C';
 		if(CallSysop) {*str++='^';*str++='T';}
@@ -469,15 +474,11 @@ void ScrNewUser(void){
 	}
 }
 
-/*
- * SpecialMessage()
- *
- * This will print a special* message on status line.
- */
-void SpecialMessage(char *message)
-{
-    if (!cfg.DepData.OldVideo)
-	statusline(message);
+// Set a special message in the status line.
+void SpecialMessage(char *msg){
+    if(cfg.DepData.OldVideo) return;
+	special=msg;
+	ScrNewUser();
 }
 
 /*
@@ -992,8 +993,8 @@ void VideoInit(void){
 
 	straight = FALSE;
 	if (cfg.DepData.OldVideo) return;
-	sprintf(buf, VARIANT_NAME " V%s  ^L for SysOp Fn ", VERSION);
-	vwherey=strlen(buf)+2;
+	sprintf(buf, VARIANT_NAME " V%s",VERSION);
+	vwherey=strlen(buf)+3;
 	video(buf);
 	ScrNewUser();
 }

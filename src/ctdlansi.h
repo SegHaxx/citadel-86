@@ -18,7 +18,6 @@ char doUngoto(char expand);
 char OptionCheck(char mode, int slot);
 char doRegular(char x, char c);
 char doSysop(void);
-char getCommand(char *c, char bs);
 char doAide(char moreYet, char first);
 
 void doDirectory(char doDir, label fileName, char *phrase);
@@ -203,7 +202,6 @@ void *FindSelect();
 CRC_TYPE calcrc(unsigned char *ptr, int count);
 
 	/* These functions are located in ROOMA.C */
-void dumpRoom(char ShowFloor);
 void fillMailRoom(void);
 void retRoom(char *roomName);
 void CountMsgs(int *count, int *NewCount);

@@ -51,7 +51,6 @@
  *	doSkip()		handles S(kip)		command
  *	doSysop()		handles sysop-only      commands
  *	doUngoto()		handles U(ngoto)	command
- *	getCommand()		prints prompt and gets command char
  *	greeting()		System-entry blurb etc
  */
 
@@ -1752,21 +1751,23 @@ char doUngoto(char moreYet)
     return GOOD_SELECT;
 }
 
-/*
- * getCommand()
- *
- * This function prints the menu prompt and gets command char and returns a
- * char via parameter and expand flag as value -- i.e., TRUE if parameters
- * follow else FALSE.
- */
-char getCommand(char *c, char bs)
-{
+// This function prints the menu prompt and gets command char and returns a
+// char via parameter and expand flag as value -- i.e., TRUE if parameters
+// follow else FALSE.
+static char getCommand(char* c,char bs){
     char expand, again;
 
     outFlag = OUTOK;
 
-    if (!bs)
-	givePrompt();
+	// the control flow in here is nuts, yo
+    if(!bs){
+	    if(!onConsole) SpecialMessage("<ESC> for CONSOLE");
+		if(onLine()){
+			givePrompt();
+		}else{
+			printf("\rWaiting for a call... ");
+		}
+	}
 
     do {
 	again = FALSE;
@@ -1844,18 +1845,13 @@ void greeting()
     printHelp("banner.sfx", HELP_NO_HELP);
 
     expert = FALSE;
-    mPrintf(" Running: %s (V%s%s) \n  ", VARIANT_NAME, VERSION, SysVers);
 	{char datebuf[10];
-    mPrintf(formDate(datebuf));}
-    mPrintf("\n H for Help\n ");
-
-    printf("Chat mode %sabled\n", cfg.BoolFlags.noChat ? "dis" : "en");
-    printf("\n 'MODEM' mode.\n "			);
-    printf("(<ESC> for CONSOLE mode.)\n "		);
+    mPrintf(" Running: %s (V%s%s)\n  %s\n ",
+		VARIANT_NAME,VERSION,SysVers,formDate(datebuf));}
     while (MIReady())
 	Citinp();
 
-    gotoRoom(baseRoom, MOVE_GOTO | MOVE_TALK);
+    gotoRoom(baseRoom, MOVE_GOTO | (onLine()?MOVE_TALK:0));
     setUp(TRUE);
 
     PrintBanner = FALSE;

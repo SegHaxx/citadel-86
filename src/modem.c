@@ -748,32 +748,32 @@ char ModemSetup(char ShouldBeCarrier)
     return TRUE;
 }
 
-/*
- * modIn()
- *
- * toplevel modem-input function.
- *
- * If DCD status has changed since the last access, reports carrier present or
- * absent and sets flags as appropriate.  In case of a carrier loss, waits 20
- * ticks and rechecks * carrier to make sure it was not a temporary glitch.
- * If carrier is newly received, returns newCarrier = TRUE;  if carrier lost
- * returns 0.  If carrier is present and state has not changed, gets a
- * character if present and returns it.  If a character is typed at the console,
- * checks to see if it is keyboard interrupt character.  If so, prints
- * short-form console menu and awaits next keyboard character.
- *
- * Globals modified:    carrierDetect   modStat		haveCarrier
- *			justLostCarrier whichIO		ExitToMsDos
- *
- * Returns:	modem or console input character,
- *		or above special values
- */
+static void ModemLog(char* msg){
+	char datebuf[10];
+	char timebuf[13];
+    printf("*** %s %s *** %s\n",formDate(datebuf),Current_Time(timebuf),msg);
+}
+
+// toplevel modem-input function.
+//
+// If DCD status has changed since the last access, reports carrier present or
+// absent and sets flags as appropriate.  In case of a carrier loss, waits 20
+// ticks and rechecks * carrier to make sure it was not a temporary glitch.
+// If carrier is newly received, returns newCarrier = TRUE;  if carrier lost
+// returns 0.  If carrier is present and state has not changed, gets a
+// character if present and returns it.  If a character is typed at the console,
+// checks to see if it is keyboard interrupt character.  If so, prints
+// short-form console menu and awaits next keyboard character.
+//
+// Globals modified:    carrierDetect   modStat		haveCarrier
+//			justLostCarrier whichIO		ExitToMsDos
+//
+// Returns:	modem or console input character,
+//		or above special values
 #define MAX_TIME	210l	/* Time out is 210 seconds	*/
-AN_UNSIGNED modIn()
-{
+AN_UNSIGNED modIn(void){
     AN_UNSIGNED logFlags = 0;
     AN_UNSIGNED c;
-    UNS_32 Rate;
     char signal = FALSE;
 
     if (PB) {
@@ -790,9 +790,11 @@ AN_UNSIGNED modIn()
 	if ((whichIO==MODEM) && (c=gotCarrier()) != modStat) {
 	    /* carrier changed   */
 	    if (c)  {	/* carrier present   */
-		Rate = FindBaud();
+		UNS_32 Rate=FindBaud();
 		if (gotCarrier()) {
-		    printf("Carr-detect (%ld)\n", Rate);
+			char msg[32];
+			sprintf(msg,(Rate==-1l)?"%s":"%s %ld","CONNECT",Rate);
+			ModemLog(msg);
 		    warned	= FALSE;
 		    haveCarrier	= TRUE;
 		    modStat	= c;
@@ -807,7 +809,7 @@ AN_UNSIGNED modIn()
 	    } else {
 		//pause(200);		/* confirm it's not a glitch */
 		if (!gotCarrier()) {    /* check again */
-		    printf("Carr-loss\n");
+			ModemLog("CARRIER LOST");
 		    logMessage(CARRLOSS, 0l, logFlags);
 		    HangUp(TRUE);
 		    modStat = haveCarrier = FALSE;
@@ -890,7 +892,8 @@ int SurreptitiousChar(char c)
 		break;
 	    }		/* yes, don't break here! */
 	case SPECIAL:		/* ESC */
-	    printf("CONSOLE mode\n ");
+		SpecialMessage("<^L> for SysOp Fn");
+	    printf("CONSOLE mode\n");
 	    whichIO = CONSOLE;
 	    if (!gotCarrier()) {
 		DisableModem(FALSE);

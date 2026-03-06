@@ -765,7 +765,6 @@ void terminate(int discon, int save)
 		EnableModem(FALSE);
 		if (!ExitToMsdos) {
 		    ReInitModem();
-		    printf("\n'MODEM' mode.\n ");
 		}
 		startTimer(NEXT_ANYNET);    /* start up anytime net timer */
 		break;
@@ -779,9 +778,6 @@ void terminate(int discon, int save)
 	}
 	logMessage(L_OUT, 0l, (discon) ? 0 : LOG_TERM_STAY);
     }
-
-	{char datebuf[10];char timebuf[13];
-    printf("%s @ %s\n",formDate(datebuf),Current_Time(timebuf));}
 
     if (loggedIn) {
 		{char datebuf[10];

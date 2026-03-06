@@ -24,7 +24,6 @@
  *	CheckForSkippedMsgs()	check for skipped msgs (Mail)
  *	CountMsgs()		counts the messages in the room.
  *	DateSearch()		analyzes for date specs
- *	dumpRoom()		tells us # new messages etc
  *	fillMailRoom()		set up Mail> from log record
  *	gotoRoom()		handles "g(oto)" command for menu
  *	GotoNamedRoom()		goto the named room, if possible.
@@ -127,13 +126,8 @@ char *DateSearch(char *str, long *before, long *after)
     return str;
 }
 
-/*
- * dumpRoom()
- *
- * This will tell us # new messages etc.
- */
-void dumpRoom(char ShowFloor)
-{
+// Tell us # new messages etc.
+static void dumpRoom(char ShowFloor){
     extern char HasSkipped;
     int		count, newCount;
 
@@ -393,7 +387,7 @@ int initCitadel(void){
 
 	printf("\n%s V%s\n%s\n\n", VARIANT_NAME, VERSION, COPYRIGHT);
 	printf("This software is Public Domain, not Commercial and not Shareware.\n\n");
-	printf("IF YOU PAID FOR THIS SOFTWARE, SOMEONE IS RIPPING YOU OFF.\n\n");
+	printf("IF YOU PAID FOR THIS SOFTWARE, SOMEONE IS RIPPING YOU OFF.\n");
 
 	if (access(LOCKFILE, 0) != -1) {
 		printf("Lock File found!!  Do you have Citadel already up?\n");
