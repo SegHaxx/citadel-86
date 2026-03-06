@@ -338,21 +338,15 @@ static void Cumulate(TwoNumbers *temp){
     DoorsUsed += temp->second;	/* cumulate it ... */
 }
 
-/*
- * BackFromDoor()
- *
- * This checks to see if we are returning from a door.  If so, then this should
- * restore the state of the installation to what it was when the door was run.
- */
-char BackFromDoor()
-{
-    char	*ml;
+// This checks to see if we are returning from a door.  If so, then this should
+// restore the state of the installation to what it was when the door was run.
+char BackFromDoor(void){
     FILE	*fd;
     Transition  Trans;
-    int	        ourBPS, h;
+    int	        ourBPS;
     long	*i;
     TwoNumbers  *temp;
-    extern char ResolveDls, OnTime[];
+    extern char ResolveDls;
     extern struct timeData lgin;
 
     if ((fd = fopen("dorinfo2.def", READ_ANY)) == NULL) {
@@ -412,9 +406,7 @@ char BackFromDoor()
     SetMailRoom();
     logMessage(DOOR_RETURN, BaudRate, 0);
 
-    h = lgin.hour;
-    civTime(&h, &ml);
-    sprintf(OnTime, "%d:%02d %s", h, lgin.minute, ml);
+    OnTime_set(lgin.hour,lgin.minute);
 
     GetIntMessage();
 

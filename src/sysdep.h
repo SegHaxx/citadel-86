@@ -323,6 +323,6 @@ DeComp[ZOO_COMP-1].CompWork != NULL || DeComp[ZIP_COMP-1].CompWork != NULL)
 #define strnCmp         strncmp
 #define isSpace         isspace
 
-/* end of file */
+void OnTime_set(int h,int m);
 
 #endif

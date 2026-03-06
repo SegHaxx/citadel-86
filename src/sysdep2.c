@@ -368,29 +368,64 @@ void ScreenUser()
     }
 }
 
-/*
- * ScrTimeUpdate()
- *
- * This function updates the screen clock.
- */
-void ScrTimeUpdate(int hr, int mn)
-{
-    char *civ;
+typedef unsigned int uint16_t;
 
-    if (cfg.DepData.Clock == ALWAYS_CLOCK ||
-       (cfg.DepData.Clock == BUSY_CLOCK && onLine())) {
-	civTime(&hr, &civ);
-	sprintf(CurTime, "%d:%02d%s", hr, mn, civ);
-	ScrNewUser();
-    }
-}
-
-static char* my_strcpy(char* dst, const char* src){
+static char* S_cp(char* dst,const char* src){
 	while((*dst++=*src++));
 	return dst-1;
 }
 
-char OnTime[20] = "";	/* not static so we can set it in sysdoor.c */
+static void div10_rem_u16(uint16_t n, uint16_t* qp, uint16_t* rp){
+	uint16_t q,r;
+	q=(n>>1)+(n>>2);
+	q=q+(q>>4);
+	q=q+(q>>8);
+	q=q>>3;
+	r=n-(((q<<2)+q)<<1);
+	if(r>9){q+=1;r-=10;}
+	*qp=q;*rp=r;
+}
+
+static char* S_u16(char* dst,uint16_t n){
+	char tmp[6];
+	register char* str=tmp+5;
+	*str=0;
+	do{
+#ifdef USE_MOD
+		*--str='0'+(n%10);n/=10;
+#else
+		uint16_t q,r;
+		div10_rem_u16(n,&q,&r);
+		*--str='0'+r;n=q;
+#endif
+	}while(n>0);
+	return S_cp(dst,str);
+}
+
+// Format time for status bar.
+static void StatusBar_FormatTime(char* dst,int h,int m){
+	char *civ;
+	civTime(&h, &civ);
+	dst=S_u16(dst,h);
+	*dst++=':';
+	if(m<10) *dst++='0';
+	dst=S_u16(dst,m);
+	S_cp(dst,civ);
+}
+
+// Update the status bar clock.
+void ScrTimeUpdate(int h,int m){
+	if(cfg.DepData.Clock==ALWAYS_CLOCK||(cfg.DepData.Clock==BUSY_CLOCK&&onLine())){
+		StatusBar_FormatTime(CurTime,h,m);
+		ScrNewUser();
+    }
+}
+
+static char OnTime[20]="";
+
+void OnTime_set(int h,int m){
+	StatusBar_FormatTime(OnTime,h,m);
+}
 
 // This function is called when changes occur that might impact the status
 void ScrNewUser(void){
@@ -401,20 +436,20 @@ void ScrNewUser(void){
 	if (cfg.DepData.OldVideo) return;
 
 	if (onLine() && strLen(OnTime) == 0) {
-		char timebuf[13];
-		sprintf(OnTime, "%s", Current_Time(timebuf));
+		char* month;
+		int y,d,h,m;
+		getCdate(&y, &month, &d, &h, &m);
+		OnTime_set(h,m);
 	}
 	else if (!onLine() && strLen(OnTime) != 0) {
 		OnTime[0] = 0;
 	}
-	if (!onLine() && cfg.DepData.Clock == BUSY_CLOCK)
-		CurTime[0] = 0;
+	if (!onLine() && cfg.DepData.Clock == BUSY_CLOCK) CurTime[0]=0;
 	{
 		char buf[80];
 		char* str=buf;
 		memset(str,' ',80);
 
-#if 1
 		if(IsChatOn()) *str++='C';
 		if(CallSysop) {*str++='^';*str++='T';}
 		if(ForceNet) {*str++='^';*str++='A';}
@@ -422,23 +457,14 @@ void ScrNewUser(void){
 		str=&buf[80-16-NAMESIZE-vwherey];
 		if(*OnTime){
 			*str++='@';
-			str=my_strcpy(str,OnTime);
+			str=S_cp(str,OnTime);
 			*str++=' ';
 		}
-		str=my_strcpy(str,logBuf.lbname);
+		str=S_cp(str,logBuf.lbname);
 		*str++=' ';
 		str=&buf[80-8-vwherey];
-		my_strcpy(str,CurTime);
-#else
-		sprintf(buf, "%-12s%-20s %c%-2s%2s%c%16s",
-				OnTime,
-				logBuf.lbname,
-				(IsChatOn()) ?  'C' : ' ',
-				CallSysop ?    "^T" : "  ",
-				ForceNet ?     "^A" : "  ",
-				!anyEcho ?      'E' : ' ', CurTime);
-#endif
-
+		if(CurTime[1]==':') ++str;
+		S_cp(str,CurTime);
 		statusline(buf);
 	}
 }
