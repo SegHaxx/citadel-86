@@ -1,0 +1,3 @@
+@echo off
+CONFG CRASH
+RUNIT CRASH
