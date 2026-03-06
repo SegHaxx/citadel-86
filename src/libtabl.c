@@ -13,6 +13,7 @@
  */
 
 #include "ctdl.h"
+//#include <alloc.h>
 
 /*
  *				Contents
@@ -254,18 +255,12 @@ int writeSysTab()
     return(TRUE);
 }
 
-/* #define MORE_DEBUG */
-/*
- * GetDynamic()
- *
- * This does mallocs with error checking.
- */
-void *GetDynamic(unsigned size)
-{
-    void *temp;
-    void *malloc();
+//#define MORE_DEBUG
+
+// This does mallocs with error checking.
+void* GetDynamic(unsigned size){
+    void* temp;
 #ifdef MORE_DEBUG
-    unsigned long coreleft(void);
     char msg[80];
 #endif
 

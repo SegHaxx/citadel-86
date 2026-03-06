@@ -1,7 +1,7 @@
 # Build Citadel-86 using GNU make and Borland C++ 5.02
 
 CC=c:\BC5\bin\bcc
-OPTFLAGS=-O1 -Og -Op
+OPTFLAGS=-O1 -Og -Op -pr
 CFLAGS=-D -ml $(OPTFLAGS) -wpro -wuse -j2 -c -d
 CFLAGS+=-1- # target 8086
 CFLAGS+=-Ix:\borlandc\include

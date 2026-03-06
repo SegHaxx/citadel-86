@@ -38,7 +38,6 @@
  *
  *	dGetWord()		reads a word off disk
  *	init()			system startup initialization
- *	main()			main controller
  *	illegal()		abort bottleneck
  *	msgInit()		sets up cfg.catChar, catSect etc.
  *	indexRooms()		build RAM index to ctdlroom.sys
@@ -382,7 +381,7 @@ static int  necessary[13]   = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 int _cdecl main(int argc,char** argv){
     FILE *fBuf, *pwdfl;
-    char line[90], status, *strchr(), *g;
+    char line[90], status, *g;
     char onlyParams = FALSE, CleanCalllog;
     char var[90];
     int  arg;
@@ -1049,6 +1048,15 @@ int roomExists(char *room)
     return(ERROR);
 }
 
+// This function sorts messages by their native msg id.
+static int _cdecl msgSort(const void* a,const void* b){
+	const theMessages* s1=a;
+	const theMessages* s2=b;
+	if(s1->rbmsgNo < s2->rbmsgNo) return  1;
+	if(s1->rbmsgNo > s2->rbmsgNo) return -1;
+	return 0;
+}
+
 /*
  * FindHighestNative()
  *
@@ -1082,16 +1090,16 @@ void FindHighestNative(MSG_NUMBER *All, MSG_NUMBER *bb)
     free(temp);
 }
 
-/*
- * msgSort()
- *
- * This function sorts messages by their native msg id.
- */
-int msgSort(theMessages *s1, theMessages *s2)
-{
-	if (s1->rbmsgNo < s2->rbmsgNo) return 1;
-	if (s1->rbmsgNo > s2->rbmsgNo) return -1;
-	return 0;
+// This function Sorts 2 entries in logTab.
+static int _cdecl logSort(const void* a,const void* b){
+	const LogTable* s1=a;
+	const LogTable* s2=b;
+	if(s1->ltnmhash == 0 && s2->ltnmhash == 0) return  0;
+    if(s1->ltnmhash == 0 && s2->ltnmhash != 0) return  1;
+    if(s1->ltnmhash != 0 && s2->ltnmhash == 0) return -1;
+    if(s1->ltnewest < s2->ltnewest) return  1;
+	if(s1->ltnewest > s2->ltnewest) return -1;
+    return 0;
 }
 
 /*
@@ -1156,26 +1164,6 @@ void logInit()
 	MoveAndClear(&Found, &MailForward);
 	UpdateForwarding();
     }
-}
-
-/*
- * logSort()
- *
- * This function Sorts 2 entries in logTab.
- */
-int logSort(LogTable *s1, LogTable *s2)
-{
-    if (s1->ltnmhash == 0 && s2->ltnmhash == 0)
-	return 0;
-    if (s1->ltnmhash == 0 && s2->ltnmhash != 0)
-	return 1;
-    if (s1->ltnmhash != 0 && s2->ltnmhash == 0)
-	return -1;
-    if (s1->ltnewest < s2->ltnewest)
-	return 1;
-    if (s1->ltnewest > s2->ltnewest)
-	return -1;
-    return 0;
 }
 
 /*
@@ -1330,9 +1318,7 @@ void crashout(char *str)
  *
  * This function gets all set up to do something with a message.
  */
-char cfindMessage(SECTOR_ID loc, MSG_NUMBER id)
-{
-    long atol();
+char cfindMessage(SECTOR_ID loc, MSG_NUMBER id){
     MSG_NUMBER here;
     extern struct mBuf mFile1;
 

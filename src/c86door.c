@@ -33,20 +33,13 @@ char *Months[] = { "",
 	"Oct", "Nov", "Dec"
 };
 
-void main(void);
 void ParamBuild(Transition *info, char *target, char *p);
 void MSDOSparse(char *theDir, char *drive);
 long CurAbsolute(void);
 void GetDate(int *year, int *month, int *day, int *hours, int *minutes);
 void CallMsg(char *fn, char *str);
 
-/*
- * main()
- *
- * Main manager.
- */
-void main()
-{
+int _cdecl main(int argc, char** argv){
 	DoorData   drBuf;
 	Transition drInf;
 	FILE	   *btfd, *drfd, *qbbs;
@@ -240,6 +233,7 @@ void main()
 			fclose(qbbs);
 		}
 	}
+	return 0;
 }
 
 /*

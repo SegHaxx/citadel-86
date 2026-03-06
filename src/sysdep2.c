@@ -562,7 +562,7 @@ int nodie()
  *
  * This is a DOS handler for control C.
  */
-int Control_C()
+int _cdecl Control_C()
 {
     Refresh++;
     return 1;

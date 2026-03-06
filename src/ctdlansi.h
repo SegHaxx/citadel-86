@@ -400,8 +400,6 @@ char isoctal( int c );
 char dGetWord(char *dest, int lim);
 char cfindMessage(SECTOR_ID loc, MSG_NUMBER id);
 
-int logSort();
-int msgSort();
 int strCmpU(char s[], char t[]);
 
 void FindHighestNative(MSG_NUMBER *all, MSG_NUMBER *bb);
@@ -687,7 +685,7 @@ void VirtSummary(char);
 
 	/* These functions reside in NETITL.C */
 char ITL_Receive(char *FileName, char ReplyFirst, char OpenIt, 
-				int (*W)(int c), int (*CloseFn)(FILE *f));
+				int (*W)(int c), int (_cdecl *CloseFn)(FILE *f));
 char ITL_Send(char mode);
 char ITL_SendMessages(void);
 char ITL_StartRecMsgs(char *FileNm, char ReplyFirst, char OpenIt,

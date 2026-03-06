@@ -1,4 +1,5 @@
 #include "keystrk.h"
+#include <conio.h>
 
 int KeyStroke()
 {

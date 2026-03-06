@@ -66,7 +66,7 @@ void ShowVerbose(DirEntry *file)
 {
     extern int DirAlign;
     extern char AlignChar;
-    char *strchr(), *c, found, funnyflag = FALSE, sbuf[100];
+    char *c, found, funnyflag = FALSE, sbuf[100];
     char work[30], *author;
     int  format;
     FILE *fd;

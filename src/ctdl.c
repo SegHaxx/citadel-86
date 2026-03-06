@@ -1878,7 +1878,6 @@ int cdecl main(int argc,char** argv){
 	extern char logNetResults, netDebug, VortexHandle, LocalAreaCode;
 
     cfg.weAre		= CITADEL;
-    slistmalloc		= GetDynamic;
     errMsg = FALSE;
 
     if ((UploadLog = getenv("DSZLOG")) == NULL) UploadLog = "";

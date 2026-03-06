@@ -38,7 +38,6 @@ void doSendWork(char *filename, void (*fn)(DirEntry *fn));
 int getModemId(void);
 void initDirList(void);
 int nodie(void);
-int Control_C(void);
 void SysWork(void (*form)(), char *cmdLine);
 int specCmpU(char *f1, char *f2);
 void setup_nocccb(void);
