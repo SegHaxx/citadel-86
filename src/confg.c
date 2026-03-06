@@ -88,8 +88,6 @@ char	 msgZap =  FALSE,
 char  FirstInit = FALSE;
 char  ReInit = FALSE;
 
-static DATA_BLOCK sectBuf;
-
 long FloorSize;
 int  DefaultPrefix;
 
@@ -127,6 +125,7 @@ int ReadDialOut(char *line, int baud, int *offset);
 
 // This does the work of zapMsgFile.
 static int realZap(void){
+	DATA_BLOCK sectBuf;
 
 	/* put null message in first sector... */
 	sectBuf[0]  = 0xFF; /*   \				*/
@@ -156,12 +155,13 @@ static int realZap(void){
 	printf("\n%d sectors to be cleared\n", cfg.maxMSector);
 	{unsigned sect;
 	for(sect=1l;sect<cfg.maxMSector;++sect){
-		printf("%u\r", sect);
+		if(!(sect%10)) printf("%u\r", sect);
 		if (fwrite(sectBuf, MSG_SECT_SIZE, 1, msgfl) != 1) {
 			printf("zapMsgFil: write failed\n");
 			return FALSE;
 		}
-	}}
+	}
+	printf("%u\r", sect);}
 	crypte(sectBuf, MSG_SECT_SIZE, 0);       /* decrypt      */
 	return TRUE;
 }
