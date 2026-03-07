@@ -231,13 +231,8 @@ static int  necessary[13]   = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 #define DOM_STUFF	9
 #define INFO_STUFF	10
 #define BIOA		11
-/*
- * main()
- *
- * Main manager for confg.c.
- */
-main(int argc, char **argv)
-{
+
+int _cdecl main(int argc,char** argv){
     FILE *fBuf, *pwdfl;
     char line[90], status, *strchr(), *g;
     char onlyParams = FALSE, CleanCalllog;
@@ -252,7 +247,7 @@ main(int argc, char **argv)
 	    fBuf = fopen("exists", "w");
 	    fprintf(fBuf, "I exist.");
 	    fclose(fBuf);
-	    exit(1);
+	    return 1;
 	}
     }
 
@@ -266,7 +261,7 @@ main(int argc, char **argv)
 "You are apparently reconfiguring from within Citadel, which is a No No!\n"
 "Do you wish to continue? ");
 	if (toUpper(simpleGetch()) != 'Y')
-	    exit(7);
+	    return 7;
 	unlink(LOCKFILE);
     }
 
@@ -335,7 +330,7 @@ main(int argc, char **argv)
     EventTab = NULL;
     if ((fBuf = fopen("ctdlcnfg.sys", READ_TEXT)) == NULL) {/* ASCII mode   */
 	printf("?Can't find ctdlCnfg.sys!\n");
-	exit(1);
+	return 1;
     }
 
     while (fgets(line, 90, fBuf) != NULL) {
@@ -562,7 +557,7 @@ main(int argc, char **argv)
     TheAreaCheck();
 
     if (!SysDepIntegrity(&offset))
-	exit(2);
+	return 2;
 
     RunListA(&ProcessLater, RedirectProcess, &offset);
     RunList(&Events, EvIsDoor);
