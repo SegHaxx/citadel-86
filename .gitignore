@@ -1,5 +1,7 @@
 *.o
+*.obj
 *.OBJ
+*.lib
 *.LIB
 *.EXE
 *.err

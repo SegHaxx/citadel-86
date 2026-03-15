@@ -1,0 +1,66 @@
+# Build Citadel-86 using GNU make and Borland C++ 5.02
+
+CC=c:\BC5\bin\bcc
+OPTFLAGS=-O1 -Og -Op
+CFLAGS=-D -ml $(OPTFLAGS) -wpro -wuse -j2 -c -d
+CFLAGS+=-1- # target 8086
+CFLAGS+=-Ix:\borlandc\include
+LDFLAGS=-Lx:\borlandc\lib
+
+TARGETS=confg.exe ctdl.exe c86door.exe
+
+all: $(TARGETS)
+
+include Common.mk
+
+%.obj: %.c
+	$(CC) $(CFLAGS) $<
+
+# ick, tlib fails if we don't quote dashes
+%.lib: %.obj
+	$(RM) $@
+	C:\BC5\bin\tlib /c $@ $(addprefix +,$(subst -,"-",$^))
+
+%.exe:
+	tlink /c $(LDFLAGS) c0l $^, $@,, cl
+
+.INTERMEDIATE: config.lib ctdl.lib
+
+confg.exe confg: confg.lib
+
+ctdl.exe ctdl: ctdl.lib
+
+c86door.exe c86door: c86door.obj
+
+PORT=	arch.obj areas.obj \
+        libbio.obj bio.obj \
+        calllog.obj cc.obj ctdl.obj \
+	events.obj \
+	libtabl.obj floors.obj \
+	hot_help.obj \
+	info.obj infodisp.obj \
+	libcryp.obj log.obj \
+	formhdr.obj \
+	mail.obj mailfwd.obj misc.obj modem.obj libmsg.obj msg.obj \
+	offline.obj \
+	rooma.obj roomb.obj \
+	tools.obj \
+	slist.obj kstrk.obj \
+	liblog.obj liblog2.obj libtime.obj libroom.obj
+
+CTDLNET=compact.obj domains.obj dom-core.obj dom-data.obj dom-init.obj \
+	libnet.obj msgnfmt.obj netcache.obj netcall.obj netedit.obj \
+	netitl.obj netmisc.obj netrcv.obj route.obj shared.obj virt.obj \
+	virt2.obj vortex.obj
+
+confg.lib: confg.obj confg2.obj syscfg.obj info.obj mailfwd.obj \
+		shared.obj tools.obj slist.obj \
+		dom-init.obj dom-data.obj \
+		arch.obj libnet.obj libmsg.obj libbio.obj \
+		virt.obj libroom.obj libcryp.obj libtabl.obj liblog.obj
+
+ctdl.lib: $(PORT) sysdep2.obj sysdep1.obj events.obj citvid.obj sysarc.obj \
+	splitf.obj syszm.obj sysdoor.obj sysibm.obj sysedit.obj syszibm.obj \
+	$(CTDLNET)
+
+-include .depend
