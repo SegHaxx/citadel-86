@@ -26,7 +26,6 @@
 /*
  * Required Global Variables
  */
-extern int thisNet;
 extern NetBuffer netBuf, netTemp;
 extern MessageBuffer   msgBuf;
 
@@ -158,7 +157,6 @@ extern CONFIG    cfg;
 extern NetBuffer netBuf, netTemp;
 extern NetTable  *netTab;
 extern FILE      *upfd, *netLog;
-extern int       thisNet;
 extern MessageBuffer   msgBuf;
 extern logBuffer logBuf;
 extern label	 HomeId;
