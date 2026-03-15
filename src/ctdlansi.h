@@ -850,7 +850,6 @@ void InitIgnoreMail(void);
 int IgnoreThisUser(int slot);
 int AcceptableMail(int from, int target);
 int IgnoredUsers(int from, int (*fn)(int));
-int IgMailRemoveEntries(int source, int target);
 void IgMailCleanup(void);
 
 #else
