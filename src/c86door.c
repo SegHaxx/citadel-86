@@ -6,8 +6,11 @@
  */
 
 #include "c86door.h"
-#include "dos.h"
 #include "time.h"
+
+#ifdef __MSDOS__
+#include "dos.h"
+#endif
 
 /*
  *				History
