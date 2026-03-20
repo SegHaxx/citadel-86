@@ -9,11 +9,14 @@
 #define CONFIGURE
 
 #include "ctdl.h"
-#include "sys\stat.h"
 #include "c86door.h"
-#include "conio.h"
 #include "stdarg.h"
 #include "psys.h"
+
+#ifdef __MSDOS__
+#include "sys\stat.h"
+#include "conio.h"
+#endif
 
 /*
  *				History
