@@ -87,6 +87,7 @@ SListBase ChatBell = { NULL, ChkTwoNumbers, NULL, free, EatTwoNumbers };
 
 char *ResFileName = "results.sys";
 
+// FIXME: what the fuck
 char *garp;
 
 extern logBuffer logBuf;		/* Log buffer of a person       */
