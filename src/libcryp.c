@@ -38,6 +38,8 @@ void crypte(void *buf, unsigned len, unsigned seed)
     static AN_UNSIGNED *b;      /* Make this static for speed (I guess),*/
     static  int c, s;		/* since register variables not around  */
 
+    if(0==cfg.cryptSeed) return;
+
     seed	= (seed + cfg.cryptSeed) & 0xFF;
     b		= (AN_UNSIGNED *) buf;
     c		= len;

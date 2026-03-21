@@ -78,7 +78,7 @@
      it once when you install the system, but not thereafter -- or you
      won't be able to read the existing files any more.
 
-#CRYPTSEED 8086
+#CRYPTSEED 0
 
      UNLOGGED USER'S SCREEN WIDTH
         This parameter is used to specify an unlogged user's screen width
