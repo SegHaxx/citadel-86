@@ -1,5 +1,6 @@
 TARGETS+=Citadel-86_Boot_360k.img
 TARGETS+=Citadel-86_Data_360k.img
+TARGETS+=Citadel-86_720k.img
 TARGETS+=Citadel-86_1.44.img
 
 all: $(TARGETS)
@@ -71,6 +72,7 @@ DIST+=release/autoexec.bat
 README360+=release/360k/readme.txt
 README144+=release/1.44/readme.txt
 DIST360+=release/360k/ctdlcnfg.sys
+DIST720+=release/1.44/ctdlcnfg.sys
 DIST144+=$(CTDLEASE) help/ release/1.44/ctdlcnfg.sys
 
 Citadel-86_1.44.img: $(DIST) $(README144) $(CTDLBAT) $(CTDLUPX) $(DIST144)
@@ -78,6 +80,14 @@ Citadel-86_1.44.img: $(DIST) $(README144) $(CTDLBAT) $(CTDLUPX) $(DIST144)
 	mcopy -m -i $@ $(DIST) ::/
 	mmd -i $@ CITADEL
 	mcopy -m -i $@ $(README144) $(CTDLBAT) $(CTDLUPX) $(DIST144) ::/CITADEL
+
+Citadel-86_720k.img: $(DIST) $(README144) $(CTDLBAT) $(CTDLUPX) $(DIST720)
+	@-rm -f $@
+	@truncate -s 720k $@
+	mformat -f 720 -i $@
+	mcopy -m -i $@ $(DIST) ::/
+	mmd -i $@ CITADEL
+	mcopy -m -i $@ $(README144) $(CTDLBAT) $(CTDLUPX) $(DIST720) ::/CITADEL
 
 Citadel-86_Boot_360k.img: $(DIST) $(README360) $(CTDLBAT) $(CTDLUPX) $(DIST360)
 	@cp bin/svardos360.img $@
